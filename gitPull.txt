@@ -1,0 +1,5 @@
+COMANDI per effettuare un pull perdendo i cambiamenti locali
+
+# git reset --hard
+# git clean -fd
+# git pull

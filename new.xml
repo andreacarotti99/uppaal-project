@@ -145,7 +145,7 @@ typedef struct{
 			<source ref="id1"/>
 			<target ref="id0"/>
 			<label kind="synchronisation" x="-552" y="-272">initialization!</label>
-			<label kind="assignment" x="-552" y="-238">initialize_all()</label>
+			<label kind="assignment" x="-544" y="-246">initialize_all()</label>
 			<nail x="-425" y="-255"/>
 		</transition>
 	</template>
@@ -360,5 +360,9 @@ t3 = Train(2);
 system l, s1, s2, s3, t1, t2, t3;
     </system>
 	<queries>
+		<query>
+			<formula></formula>
+			<comment></comment>
+		</query>
 	</queries>
 </nta>
