@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+clock general_clock;
+
+chan enter, free_truck, start, initialization;
+
+
+/*
+this is a sort of map: it provides information of where are currently the trains, the train is the INDEX
+so if for example Train(1) is at station 1, Train(2) is at station 3, and Train(3) is at station 2 is initialized like this:
+int whereIsTrain[3] = {1, 3, 2};
+*/
+int trainActualStation[3] = {1,1,1};
+
+/*
+this provides info on whether the station INDEX is free or not, 1 means the station is available, 0 means it is not
+*/
+int stationAvailableToReceiveTrains[3] = {1,1,1};
+
+/*
+number of available trucks free in the INDEX station
+*/
+int stationNumberOfAvailableTrucks[3] = {0,2, 2};
+
+/*
+charges of train, first element charge of Train(1), second element charge of Train(2) and third element charge of Train(3)
+*/
+int trainActualCharge[3] = {100,100,100};
+
+/*
+this is the max charge of train INDEX
+*/
+int trainMaxCharge[3] = {100,100,100};
+
+
+/*
+based on the policy that we will decide, this will be accessed by the Train(i) to check whether can go to the next station, and
+will be edited by the station that decides who can leave and who cannot
+*/
+int trainCanLeaveActualStation[3] = {0,0,0};
+
+/*distance for train INDEX to reach next station in time units*/
+int trainCurrentDistance[3] = {10,10,10};
+
+/*
+velocity of Train(i)
+*/
+int trainVelocity[3] = {10,10,10};
+
+/*
+this function is to initialize everything, right now all the parameters are hard-coded 
+*/
+void initialize_all(){
+    
+}
+</declaration>
+	<template>
+		<name>Line</name>
+		<parameter>int LineNumber</parameter>
+		<declaration>// Line Clocks
+
+// Line Variables
+typedef struct{
+    int distance[2];    //distance (in km) between each pair of consecutive stations
+    int max_delay[2];    //maximum time to reach the following station: associated to each pair of consecutive stations
+}line;
+
+// Line Functions 
+</declaration>
+		<location id="id0" x="-391" y="-255">
+			<name x="-416" y="-289">working</name>
+		</location>
+		<location id="id1" x="-604" y="-255">
+			<name x="-620" y="-289">initial</name>
+		</location>
+		<init ref="id1"/>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-374" y="-178">initialization!</label>
+			<nail x="-391" y="-187"/>
+			<nail x="-323" y="-187"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="assignment" x="-552" y="-238">initialize_all()</label>
+			<nail x="-425" y="-255"/>
+		</transition>
+	</template>
+	<template>
+		<name>Station</name>
+		<parameter>int StationNumber</parameter>
+		<declaration>// Station Clocks
+
+// Station Variables
+typedef struct{
+    int trucks;
+    int availableTrucks;
+}station;
+
+station s;
+
+// Station Functions
+void addAvlTrucks(int i) {
+   s.availableTrucks += (i);
+}
+
+void decideWhoCanLeaveActualStation(){
+    trainCanLeaveActualStation[2] = true;
+}
+
+
+
+
+
+
+</declaration>
+		<location id="id2" x="-722" y="-425">
+			<name x="-884" y="-442">waiting_for_trains</name>
+		</location>
+		<location id="id3" x="-348" y="-425">
+			<name x="-331" y="-433">fully_occupied</name>
+		</location>
+		<location id="id4" x="-552" y="-824">
+			<name x="-562" y="-858">idle</name>
+		</location>
+		<init ref="id4"/>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-518" y="-688">stationNumberOfAvailableTrucks[StationNumber] == 0</label>
+			<label kind="synchronisation" x="-510" y="-714">initialization?</label>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-909" y="-688">stationNumberOfAvailableTrucks[StationNumber] &gt; 0</label>
+			<label kind="synchronisation" x="-688" y="-714">initialization?</label>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="-815" y="-553">enter!</label>
+			<label kind="assignment" x="-840" y="-536">addAvlTrucks(-1)</label>
+			<nail x="-722" y="-536"/>
+			<nail x="-858" y="-536"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-849" y="-281">s.availableTrucks&gt;1</label>
+			<label kind="synchronisation" x="-807" y="-315">free_truck?</label>
+			<label kind="assignment" x="-823" y="-298">addAvlTrucks(1)</label>
+			<nail x="-722" y="-298"/>
+			<nail x="-841" y="-298"/>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="synchronisation" x="-568" y="-570">free_truck?</label>
+			<label kind="assignment" x="-586" y="-586">addAvlTrucks(1)</label>
+			<nail x="-535" y="-535"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-586" y="-374">s.availableTrucks==1</label>
+			<label kind="synchronisation" x="-553" y="-416">enter!</label>
+			<label kind="assignment" x="-578" y="-391">addAvlTrucks(-1)</label>
+		</transition>
+	</template>
+	<template>
+		<name>Train</name>
+		<parameter>int TrainNumber</parameter>
+		<declaration>// Train Clocks
+
+
+// Train Functions
+</declaration>
+		<location id="id5" x="-1130" y="-646">
+			<name x="-1241" y="-680">waiting_in_a_station</name>
+		</location>
+		<location id="id6" x="-510" y="-646">
+			<name x="-535" y="-680">traveling</name>
+		</location>
+		<location id="id7" x="-1122" y="-416">
+			<name x="-1209" y="-399">waiting_outside_a_station</name>
+		</location>
+		<location id="id8" x="-510" y="-416">
+			<name x="-493" y="-425">out_of_power</name>
+		</location>
+		<init ref="id5"/>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id5"/>
+			<nail x="-1215" y="-595"/>
+			<nail x="-1215" y="-646"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-952" y="-408">trainActualCharge[TrainNumber]==0</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-484" y="-544">trainActualCharge[TrainNumber]==0</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id5"/>
+			<label kind="synchronisation" x="-935" y="-748">enter?</label>
+			<nail x="-909" y="-722"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id5"/>
+			<label kind="synchronisation" x="-1130" y="-551">enter?</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id7"/>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-1020" y="-629">trainCanLeaveActualStation[TrainNumber] == 1</label>
+			<label kind="synchronisation" x="-884" y="-663">free_truck!</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+l = Line(0);
+s1 = Station(0);
+s2 = Station(1);
+s3 = Station(2);
+t1 = Train(0);
+t2 = Train(1);
+t3 = Train(2);
+// List one or more processes to be composed into a system.
+system l, s1, s2, s3, t1, t2, t3;
+    </system>
+	<queries>
+	</queries>
+</nta>
