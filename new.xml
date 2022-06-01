@@ -309,7 +309,7 @@ void updateIfTrainCanLeave(){
 		<transition>
 			<source ref="id6"/>
 			<target ref="id6"/>
-			<label kind="assignment" x="-1266" y="-646">recharge()</label>
+			<label kind="assignment" x="-1377" y="-629">recharge(), updateIfTrainCanLeave()</label>
 			<nail x="-1215" y="-595"/>
 			<nail x="-1215" y="-646"/>
 		</transition>
