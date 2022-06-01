@@ -4,7 +4,7 @@
 	<declaration>// Place global declarations here.
 clock general_clock;
 
-chan enter, free_truck, start, initialization;
+chan enter, free_truck, start, initialization, wait;
 
 
 /*
@@ -15,14 +15,24 @@ int whereIsTrain[3] = {1, 3, 2};
 int trainActualStation[3] = {1,1,1};
 
 /*
+same as above, but maps the next station for each train
+*/
+int trainNextStation[3] = {2,2,2};
+
+/*
 this provides info on whether the station INDEX is free or not, 1 means the station is available, 0 means it is not
 */
-int stationAvailableToReceiveTrains[3] = {1,1,1};
+bool stationAvailableToReceiveTrains[3] = {true,true,true};
 
 /*
 number of available trucks free in the INDEX station
 */
-int stationNumberOfAvailableTrucks[3] = {0,2, 2};
+int stationNumberOfAvailableTrucks[3] = {0,1,2};
+
+/*
+number of total trucks free in the INDEX station
+*/
+int stationNumberOfTrucks[3] = {3,1,2};
 
 /*
 charges of train, first element charge of Train(1), second element charge of Train(2) and third element charge of Train(3)
@@ -39,7 +49,7 @@ int trainMaxCharge[3] = {100,100,100};
 based on the policy that we will decide, this will be accessed by the Train(i) to check whether can go to the next station, and
 will be edited by the station that decides who can leave and who cannot
 */
-int trainCanLeaveActualStation[3] = {0,0,0};
+bool trainCanLeaveActualStation[3] = {false,false,false};
 
 /*distance for train INDEX to reach next station in time units*/
 int trainCurrentDistance[3] = {10,10,10};
@@ -50,11 +60,38 @@ velocity of Train(i)
 int trainVelocity[3] = {10,10,10};
 
 /*
+vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
+*/
+bool trainGoingForward[3] = {true, true, true};
+
+/*
 this function is to initialize everything, right now all the parameters are hard-coded 
 */
 void initialize_all(){
-    
 }
+
+/*
+function used to update the next station of each train
+*/
+void updateNextStation(int trainId) {
+    if( trainGoingForward[trainId] ) {
+        if(trainActualStation[trainId] &lt; 3 )
+            trainNextStation[trainId] += 1;
+        else{
+            trainGoingForward[trainId] = false; //end of line reached! change direction
+            trainNextStation[trainId] -= 1;
+        }
+    }
+    else{
+        if(trainActualStation[trainId] &gt; 0)
+            trainNextStation[trainId] -= 1;
+        else {
+            trainGoingForward[trainId] = true;    //first station of line reached! change direction
+            trainNextStation[trainId] += 1;
+        }
+    }
+}
+
 </declaration>
 	<template>
 		<name>Line</name>
@@ -118,51 +155,59 @@ void decideWhoCanLeaveActualStation(){
 
 
 </declaration>
-		<location id="id2" x="-722" y="-425">
-			<name x="-884" y="-442">waiting_for_trains</name>
+		<location id="id2" x="-782" y="-425">
+			<name x="-944" y="-442">waiting_for_trains</name>
 		</location>
 		<location id="id3" x="-348" y="-425">
-			<name x="-331" y="-433">fully_occupied</name>
+			<name x="-331" y="-408">fully_occupied</name>
 		</location>
 		<location id="id4" x="-552" y="-824">
 			<name x="-562" y="-858">idle</name>
 		</location>
 		<init ref="id4"/>
 		<transition>
+			<source ref="id3"/>
+			<target ref="id3"/>
+			<label kind="synchronisation" x="-331" y="-391">wait!</label>
+			<nail x="-348" y="-306"/>
+			<nail x="-110" y="-306"/>
+			<nail x="-110" y="-425"/>
+		</transition>
+		<transition>
 			<source ref="id4"/>
 			<target ref="id3"/>
-			<label kind="guard" x="-518" y="-688">stationNumberOfAvailableTrucks[StationNumber] == 0</label>
-			<label kind="synchronisation" x="-510" y="-714">initialization?</label>
+			<label kind="guard" x="-467" y="-688">stationNumberOfAvailableTrucks[StationNumber] == 0</label>
+			<label kind="synchronisation" x="-476" y="-714">initialization?</label>
 		</transition>
 		<transition>
 			<source ref="id4"/>
 			<target ref="id2"/>
-			<label kind="guard" x="-909" y="-688">stationNumberOfAvailableTrucks[StationNumber] &gt; 0</label>
-			<label kind="synchronisation" x="-688" y="-714">initialization?</label>
+			<label kind="guard" x="-1003" y="-688">stationNumberOfAvailableTrucks[StationNumber] &gt; 0</label>
+			<label kind="synchronisation" x="-739" y="-714">initialization?</label>
 		</transition>
 		<transition>
 			<source ref="id2"/>
 			<target ref="id2"/>
-			<label kind="synchronisation" x="-815" y="-553">enter!</label>
-			<label kind="assignment" x="-840" y="-536">addAvlTrucks(-1)</label>
-			<nail x="-722" y="-536"/>
-			<nail x="-858" y="-536"/>
+			<label kind="synchronisation" x="-875" y="-553">enter!</label>
+			<label kind="assignment" x="-900" y="-536">addAvlTrucks(-1)</label>
+			<nail x="-782" y="-536"/>
+			<nail x="-918" y="-536"/>
 		</transition>
 		<transition>
 			<source ref="id2"/>
 			<target ref="id2"/>
-			<label kind="guard" x="-849" y="-281">s.availableTrucks&gt;1</label>
-			<label kind="synchronisation" x="-807" y="-315">free_truck?</label>
-			<label kind="assignment" x="-823" y="-298">addAvlTrucks(1)</label>
-			<nail x="-722" y="-298"/>
-			<nail x="-841" y="-298"/>
+			<label kind="guard" x="-909" y="-281">s.availableTrucks&gt;1</label>
+			<label kind="synchronisation" x="-867" y="-315">free_truck?</label>
+			<label kind="assignment" x="-883" y="-298">addAvlTrucks(1)</label>
+			<nail x="-782" y="-298"/>
+			<nail x="-901" y="-298"/>
 		</transition>
 		<transition>
 			<source ref="id3"/>
 			<target ref="id2"/>
-			<label kind="synchronisation" x="-568" y="-570">free_truck?</label>
-			<label kind="assignment" x="-586" y="-586">addAvlTrucks(1)</label>
-			<nail x="-535" y="-535"/>
+			<label kind="synchronisation" x="-586" y="-561">free_truck?</label>
+			<label kind="assignment" x="-604" y="-577">addAvlTrucks(1)</label>
+			<nail x="-552" y="-535"/>
 		</transition>
 		<transition>
 			<source ref="id2"/>
@@ -179,56 +224,80 @@ void decideWhoCanLeaveActualStation(){
 
 
 // Train Functions
-</declaration>
+void recharge(){
+    if( trainActualCharge[TrainNumber] &lt; trainMaxCharge[TrainNumber] + 1 )
+        trainActualCharge[TrainNumber] += 1;
+}
+
+void loose_charge(){
+    if( (trainActualCharge[TrainNumber] - 1) &gt;= 0 )
+        trainActualCharge[TrainNumber] -= 1;
+}</declaration>
 		<location id="id5" x="-1130" y="-646">
 			<name x="-1241" y="-680">waiting_in_a_station</name>
 		</location>
 		<location id="id6" x="-510" y="-646">
 			<name x="-535" y="-680">traveling</name>
 		</location>
-		<location id="id7" x="-1122" y="-416">
-			<name x="-1209" y="-399">waiting_outside_a_station</name>
+		<location id="id7" x="-1130" y="-331">
+			<name x="-1217" y="-314">waiting_outside_a_station</name>
 		</location>
-		<location id="id8" x="-510" y="-416">
-			<name x="-493" y="-425">out_of_power</name>
+		<location id="id8" x="-510" y="-331">
+			<name x="-493" y="-340">out_of_power</name>
 		</location>
 		<init ref="id5"/>
 		<transition>
+			<source ref="id7"/>
+			<target ref="id7"/>
+			<label kind="assignment" x="-1266" y="-450">loose_charge()</label>
+			<nail x="-1266" y="-331"/>
+			<nail x="-1266" y="-433"/>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id6"/>
+			<label kind="assignment" x="-492" y="-646">loose_charge()</label>
+			<nail x="-348" y="-646"/>
+			<nail x="-348" y="-756"/>
+		</transition>
+		<transition>
 			<source ref="id5"/>
 			<target ref="id5"/>
+			<label kind="assignment" x="-1292" y="-646">recharge()</label>
 			<nail x="-1215" y="-595"/>
 			<nail x="-1215" y="-646"/>
 		</transition>
 		<transition>
 			<source ref="id7"/>
 			<target ref="id8"/>
-			<label kind="guard" x="-952" y="-408">trainActualCharge[TrainNumber]==0</label>
+			<label kind="guard" x="-952" y="-323">trainActualCharge[TrainNumber]==0</label>
 		</transition>
 		<transition>
 			<source ref="id6"/>
 			<target ref="id8"/>
-			<label kind="guard" x="-484" y="-544">trainActualCharge[TrainNumber]==0</label>
+			<label kind="guard" x="-501" y="-510">trainActualCharge[TrainNumber]==0</label>
 		</transition>
 		<transition>
 			<source ref="id6"/>
 			<target ref="id5"/>
-			<label kind="synchronisation" x="-935" y="-748">enter?</label>
-			<nail x="-909" y="-722"/>
+			<label kind="synchronisation" x="-858" y="-756">enter?</label>
+			<nail x="-841" y="-731"/>
 		</transition>
 		<transition>
 			<source ref="id7"/>
 			<target ref="id5"/>
-			<label kind="synchronisation" x="-1130" y="-551">enter?</label>
+			<label kind="synchronisation" x="-1122" y="-518">enter?</label>
 		</transition>
 		<transition>
 			<source ref="id6"/>
 			<target ref="id7"/>
+			<label kind="synchronisation" x="-850" y="-518">wait?</label>
 		</transition>
 		<transition>
 			<source ref="id5"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-1020" y="-629">trainCanLeaveActualStation[TrainNumber] == 1</label>
-			<label kind="synchronisation" x="-884" y="-663">free_truck!</label>
+			<label kind="guard" x="-994" y="-637">trainCanLeaveActualStation[TrainNumber]</label>
+			<label kind="synchronisation" x="-867" y="-671">free_truck!</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
@@ -243,5 +312,9 @@ t3 = Train(2);
 system l, s1, s2, s3, t1, t2, t3;
     </system>
 	<queries>
+		<query>
+			<formula></formula>
+			<comment></comment>
+		</query>
 	</queries>
 </nta>
