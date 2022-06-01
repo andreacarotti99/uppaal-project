@@ -4,7 +4,27 @@
 	<declaration>// Place global declarations here.
 clock general_clock;
 
-chan enter, free_truck, start, initialization, wait;
+chan enter, free_truck, start, wait;
+
+
+/***********/
+urgent broadcast chan initialization;
+
+/***********/
+
+/*
+first element is the distance in km from station 1 to station 2, 
+second element is the distance in km from station 2 to station 3
+EXPRESSED IN UNITS
+*/
+int lineDistance[2] = {23, 35};
+
+/*
+first element is the max time needed to get from station 1 to 2
+second element is the max time needed to get from station 2 to 3
+EXPRESSED IN CLOCKS
+*/
+int lineMaxDelay[2] = {20, 30};
 
 
 /*
@@ -37,7 +57,7 @@ int stationNumberOfTrucks[3] = {3,1,2};
 /*
 charges of train, first element charge of Train(1), second element charge of Train(2) and third element charge of Train(3)
 */
-int trainActualCharge[3] = {100,100,100};
+int trainActualCharge[3] = {100,5,100};
 
 /*
 this is the max charge of train INDEX
@@ -51,11 +71,16 @@ will be edited by the station that decides who can leave and who cannot
 */
 bool trainCanLeaveActualStation[3] = {false,false,false};
 
-/*distance for train INDEX to reach next station in time units*/
-int trainCurrentDistance[3] = {10,10,10};
+
+/*
+distance in UNITS for train INDEX to reach the next station 
+EXPRESSED IN UNITS
+*/
+int trainDistanceToReachNextStation[3] = {23,23,23};
 
 /*
 velocity of Train(i)
+EXPRESSED in UNITS/CLOCK
 */
 int trainVelocity[3] = {10,10,10};
 
@@ -92,6 +117,8 @@ void updateNextStation(int trainId) {
     }
 }
 
+
+
 </declaration>
 	<template>
 		<name>Line</name>
@@ -111,18 +138,13 @@ typedef struct{
 		</location>
 		<location id="id1" x="-604" y="-255">
 			<name x="-620" y="-289">initial</name>
+			<committed/>
 		</location>
 		<init ref="id1"/>
 		<transition>
-			<source ref="id0"/>
-			<target ref="id0"/>
-			<label kind="synchronisation" x="-374" y="-178">initialization!</label>
-			<nail x="-391" y="-187"/>
-			<nail x="-323" y="-187"/>
-		</transition>
-		<transition>
 			<source ref="id1"/>
 			<target ref="id0"/>
+			<label kind="synchronisation" x="-552" y="-272">initialization!</label>
 			<label kind="assignment" x="-552" y="-238">initialize_all()</label>
 			<nail x="-425" y="-255"/>
 		</transition>
@@ -221,7 +243,7 @@ void decideWhoCanLeaveActualStation(){
 		<name>Train</name>
 		<parameter>int TrainNumber</parameter>
 		<declaration>// Train Clocks
-
+clock trainClock;
 
 // Train Functions
 void recharge(){
@@ -232,70 +254,96 @@ void recharge(){
 void loose_charge(){
     if( (trainActualCharge[TrainNumber] - 1) &gt;= 0 )
         trainActualCharge[TrainNumber] -= 1;
+}
+
+void update_distance (){
+    trainDistanceToReachNextStation[TrainNumber] -= trainVelocity[TrainNumber];
+}
+
+
+//naive
+void updateIfTrainCanLeave(){
+    if(trainActualCharge[TrainNumber] &gt;= trainDistanceToReachNextStation[TrainNumber]){
+        trainCanLeaveActualStation[TrainNumber] = true;
+    }
+    else {
+        trainCanLeaveActualStation[TrainNumber] = false;
+    }
 }</declaration>
-		<location id="id5" x="-1130" y="-646">
+		<location id="id5" x="-1130" y="-790">
+			<name x="-1164" y="-816">idle</name>
+		</location>
+		<location id="id6" x="-1130" y="-646">
 			<name x="-1241" y="-680">waiting_in_a_station</name>
 		</location>
-		<location id="id6" x="-510" y="-646">
+		<location id="id7" x="-510" y="-646">
 			<name x="-535" y="-680">traveling</name>
 		</location>
-		<location id="id7" x="-1130" y="-331">
+		<location id="id8" x="-1130" y="-331">
 			<name x="-1217" y="-314">waiting_outside_a_station</name>
 		</location>
-		<location id="id8" x="-510" y="-331">
+		<location id="id9" x="-510" y="-331">
 			<name x="-493" y="-340">out_of_power</name>
 		</location>
 		<init ref="id5"/>
 		<transition>
-			<source ref="id7"/>
-			<target ref="id7"/>
+			<source ref="id5"/>
+			<target ref="id6"/>
+			<label kind="synchronisation" x="-1173" y="-765">initialization?</label>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id8"/>
 			<label kind="assignment" x="-1266" y="-450">loose_charge()</label>
 			<nail x="-1266" y="-331"/>
 			<nail x="-1266" y="-433"/>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id6"/>
-			<label kind="assignment" x="-492" y="-646">loose_charge()</label>
+			<source ref="id7"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-484" y="-739">trainDistanceToReachNextStation[TrainNumber] &gt; 0</label>
+			<label kind="assignment" x="-408" y="-714">loose_charge(), update_distance()</label>
 			<nail x="-348" y="-646"/>
 			<nail x="-348" y="-756"/>
 		</transition>
 		<transition>
-			<source ref="id5"/>
-			<target ref="id5"/>
-			<label kind="assignment" x="-1292" y="-646">recharge()</label>
+			<source ref="id6"/>
+			<target ref="id6"/>
+			<label kind="assignment" x="-1266" y="-646">recharge()</label>
 			<nail x="-1215" y="-595"/>
 			<nail x="-1215" y="-646"/>
 		</transition>
 		<transition>
-			<source ref="id7"/>
-			<target ref="id8"/>
+			<source ref="id8"/>
+			<target ref="id9"/>
 			<label kind="guard" x="-952" y="-323">trainActualCharge[TrainNumber]==0</label>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id8"/>
+			<source ref="id7"/>
+			<target ref="id9"/>
 			<label kind="guard" x="-501" y="-510">trainActualCharge[TrainNumber]==0</label>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id5"/>
-			<label kind="synchronisation" x="-858" y="-756">enter?</label>
-			<nail x="-841" y="-731"/>
+			<source ref="id7"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-960" y="-790">trainDistanceToReachNextStation[TrainNumber] == 0</label>
+			<label kind="synchronisation" x="-858" y="-815">enter?</label>
+			<nail x="-841" y="-790"/>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id6"/>
+			<label kind="synchronisation" x="-1122" y="-518">enter?</label>
 		</transition>
 		<transition>
 			<source ref="id7"/>
-			<target ref="id5"/>
-			<label kind="synchronisation" x="-1122" y="-518">enter?</label>
+			<target ref="id8"/>
+			<label kind="guard" x="-994" y="-493">trainDistanceToReachNextStation[TrainNumber] == 0</label>
+			<label kind="synchronisation" x="-841" y="-518">wait?</label>
 		</transition>
 		<transition>
 			<source ref="id6"/>
 			<target ref="id7"/>
-			<label kind="synchronisation" x="-850" y="-518">wait?</label>
-		</transition>
-		<transition>
-			<source ref="id5"/>
-			<target ref="id6"/>
 			<label kind="guard" x="-994" y="-637">trainCanLeaveActualStation[TrainNumber]</label>
 			<label kind="synchronisation" x="-867" y="-671">free_truck!</label>
 		</transition>
@@ -312,9 +360,5 @@ t3 = Train(2);
 system l, s1, s2, s3, t1, t2, t3;
     </system>
 	<queries>
-		<query>
-			<formula></formula>
-			<comment></comment>
-		</query>
 	</queries>
 </nta>
