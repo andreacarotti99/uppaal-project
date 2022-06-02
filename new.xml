@@ -115,56 +115,7 @@ void initialize_all(){
 }
 
 /*
-function used to update the next station of each train
-*/
-void updateNextStation(int trainId) {
-    if( trainGoingForward[trainId] ) {
-        if(trainActualStation[trainId] &lt; 2 )
-            trainNextStation[trainId] += 1;
-        else{
-            trainGoingForward[trainId] = false; //end of line reached! change direction
-            trainNextStation[trainId] -= 1;
-        }
-    }
-    else{
-        if(trainActualStation[trainId] &gt; 0)
-            trainNextStation[trainId] -= 1;
-        else {
-            trainGoingForward[trainId] = true;    //first station of line reached! change direction
-            trainNextStation[trainId] += 1;
-        }
-    }
-}
-
-/*
-update the maximum time a train can take to get to the following station
-*/
-void updateNextTime(int TrainNumber) {
-    int index;
-    if ( trainActualStation[TrainNumber] &lt; trainNextStation[TrainNumber] ) {
-        index = trainActualStation[TrainNumber];
-    }
-    else {
-        index = trainNextStation[TrainNumber];
-    }
-    trainTimeLeft[TrainNumber] = lineMaxDelay[index];
-}
-
-/*
-update the distance to reach the following station
-*/
-void updateNextDistance(int TrainNumber) {
-    int index;
-    if ( trainActualStation[TrainNumber] &lt; trainNextStation[TrainNumber] )
-        index = trainActualStation[TrainNumber];
-    else 
-        index = trainNextStation[TrainNumber];
-    trainDistanceToNextStation[TrainNumber] = lineDistance[index];
-    
-}
-
-/*
-retrieve info about current max delay
+retrieve info about current max delay -- not used so far
 */
 int getCurrentMaxDelay(int TrainNumber) {
     int index;
@@ -210,9 +161,9 @@ typedef struct{
 	<template>
 		<name>Station</name>
 		<parameter>int StationNumber</parameter>
-		<declaration>// Station Clocks
-
-// Station Variables
+		<declaration>/**********************************************************************************************
+/******************************* STATION VARIABLES ********************************************
+/**********************************************************************************************/
 /*
 typedef struct{
     int trucks;
@@ -225,7 +176,12 @@ station s;
 bool letIn = false;
 
 
-// Station Functions
+/**********************************************************************************************
+/******************************* STATION FUNCTIONS ********************************************
+/**********************************************************************************************/
+/*
+function needed to modify the # of available trucks
+*/
 void addAvlTrucks(int i) {
    stationAvailableTrucks[StationNumber] += (i);
 }
@@ -255,7 +211,9 @@ bool talkingWithMe() {
     return talkingWithStation[StationNumber] &gt; 0;
 }
 
-//function to upload the letIn variable
+/*
+function to upload the letIn variable
+*/
 void updateLetIn(bool val){
     letIn = val;
 }
@@ -361,7 +319,13 @@ and letIn</label>
 clock trainClock; 
 clock timeTraveling; //must be reset as soon as a train enters a station
 
-// Train Functions
+/**********************************************************************************************
+/******************************** TRAIN FUNCTIONS *********************************************
+/**********************************************************************************************/
+
+/*
+function to raise the battery level of a train -- policy needed
+*/
 void recharge(){
     if( (trainActualCharge[TrainNumber] + 1)  &lt; trainMaxCharge[TrainNumber] )
         trainActualCharge[TrainNumber] += 1;
@@ -382,6 +346,55 @@ void update_distance (){
         trainDistanceToNextStation[TrainNumber] -= trainVelocity[TrainNumber];
     else
         trainDistanceToNextStation[TrainNumber] = 0;
+}
+
+/*
+function used to update the next station of each train
+*/
+void updateNextStation(int trainId) {
+    if( trainGoingForward[trainId] ) {
+        if(trainActualStation[trainId] &lt; 2 )
+            trainNextStation[trainId] += 1;
+        else{
+            trainGoingForward[trainId] = false; //end of line reached! change direction
+            trainNextStation[trainId] -= 1;
+        }
+    }
+    else{
+        if(trainActualStation[trainId] &gt; 0)
+            trainNextStation[trainId] -= 1;
+        else {
+            trainGoingForward[trainId] = true;    //first station of line reached! change direction
+            trainNextStation[trainId] += 1;
+        }
+    }
+}
+
+/*
+update the maximum time a train can take to get to the following station
+*/
+void updateNextTime(int TrainNumber) {
+    int index;
+    if ( trainActualStation[TrainNumber] &lt; trainNextStation[TrainNumber] ) {
+        index = trainActualStation[TrainNumber];
+    }
+    else {
+        index = trainNextStation[TrainNumber];
+    }
+    trainTimeLeft[TrainNumber] = lineMaxDelay[index];
+}
+
+/*
+update the distance to reach the following station
+*/
+void updateNextDistance(int TrainNumber) {
+    int index;
+    if ( trainActualStation[TrainNumber] &lt; trainNextStation[TrainNumber] )
+        index = trainActualStation[TrainNumber];
+    else 
+        index = trainNextStation[TrainNumber];
+    trainDistanceToNextStation[TrainNumber] = lineDistance[index];
+    
 }
 
 /*
