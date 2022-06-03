@@ -47,7 +47,7 @@ this provides info on whether the station INDEX is free or not : CAN JUST BE CHE
 /*
 number of available trucks free in the INDEX station
 */
-int stationAvailableTrucks[3] = { 0, 1, 2 };
+int stationAvailableTrucks[3] = { 0, 2, 2 };
 
 /*
 number of total trucks free in the INDEX station
@@ -103,7 +103,17 @@ used to set up communicaitions between trains and stations: indicates the # of t
 */
 int talkingWithStation[3] = { 0, 0, 0 };
 
- 
+
+bool accessGranted[3] = {false, false, false}; 
+
+/*
+t0, t1, t2  t0, t1, t2  t0, t1, t2
+----------  ----------  ----------
+s0            s1         s2
+*/
+int trainWantsToAccess[9] = {0,0,0,0,0,0,0,0,0};
+int trainCanAccess[9] = {0,0,0,0,0,0,0,0,0};
+
 /**********************************************************************************************
 /******************************* GLOBAL FUNCTIONS *********************************************
 /**********************************************************************************************/
@@ -259,7 +269,6 @@ void checkTrainArrived(){
 		<transition>
 			<source ref="id3"/>
 			<target ref="id3"/>
-			<label kind="synchronisation" x="-816" y="-365">wait!</label>
 			<nail x="-833" y="-297"/>
 			<nail x="-680" y="-297"/>
 			<nail x="-680" y="-399"/>
@@ -281,7 +290,6 @@ void checkTrainArrived(){
 			<target ref="id2"/>
 			<label kind="guard" x="-1496" y="-799">stationAvailableTrucks[StationNumber] &gt; 1
 and letIn</label>
-			<label kind="synchronisation" x="-1496" y="-765">enter!</label>
 			<label kind="assignment" x="-1496" y="-748">addAvlTrucks(-1), updateLetIn(false)</label>
 			<nail x="-1309" y="-723"/>
 			<nail x="-1496" y="-722"/>
@@ -307,9 +315,87 @@ and letIn</label>
 			<source ref="id2"/>
 			<target ref="id3"/>
 			<label kind="guard" x="-1232" y="-365">stationAvailableTrucks[StationNumber] ==1 and letIn</label>
-			<label kind="synchronisation" x="-1081" y="-398">enter!</label>
 			<label kind="assignment" x="-1173" y="-382">addAvlTrucks(-1), updateLetIn(false)</label>
 			<nail x="-1309" y="-399"/>
+		</transition>
+	</template>
+	<template>
+		<name>StationManager</name>
+		<declaration>
+int canEnter = 0;
+
+void checkIfTrainCanEnter(){
+    int i;
+    int stationIndex; 
+    for (i=0; i&lt;9; i++){
+        if(trainWantsToAccess[i]) {
+            if(i&gt;=0 and i&lt;3) {
+                stationIndex = 0;
+                if(stationAvailableTrucks[stationIndex] &gt; 0){
+                    trainCanAccess[stationIndex * 3 + i] = 1;
+                    stationAvailableTrucks[stationIndex] -= 1;
+                    canEnter += 1;
+                }
+            }
+            else { 
+                if (i&gt;=3 and i&lt;6) {
+                    stationIndex = 1;
+                    if(stationAvailableTrucks[stationIndex] &gt; 0){
+                        trainCanAccess[stationIndex * 3 + (i-3)] = 1;
+                        stationAvailableTrucks[stationIndex] -= 1;
+                        canEnter += 1;
+                    }
+                }
+                else {
+                    stationIndex = 2;
+                    if(stationAvailableTrucks[stationIndex] &gt; 0){
+                        trainCanAccess[stationIndex * 3 + (i-6)] = 1;
+                        stationAvailableTrucks[stationIndex] -= 1;
+                        canEnter += 1;
+                    }
+                 }
+            }
+        }
+    }
+}
+
+
+</declaration>
+		<location id="id5" x="-204" y="-127">
+			<name x="-179" y="-152">working</name>
+		</location>
+		<location id="id6" x="-204" y="-339">
+			<committed/>
+		</location>
+		<location id="id7" x="-450" y="-42">
+		</location>
+		<init ref="id7"/>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id5"/>
+			<label kind="synchronisation" x="-432" y="-101">initialization?</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="-408" y="-212">canEnter-=1</label>
+			<nail x="-289" y="-339"/>
+			<nail x="-289" y="-127"/>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-196" y="-220">canEnter</label>
+			<label kind="synchronisation" x="-186" y="-237">enter!</label>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id5"/>
+			<label kind="guard" x="25" y="-76">canEnter==0</label>
+			<label kind="assignment" x="25" y="-93">checkIfTrainCanEnter()</label>
+			<nail x="-204" y="-34"/>
+			<nail x="17" y="-33"/>
+			<nail x="17" y="-127"/>
 		</transition>
 	</template>
 	<template>
@@ -454,51 +540,61 @@ void updateStationChan(int val){
     int stationIndex = trainActualStation[TrainNumber];
     talkingWithStation[stationIndex] += val;
 }
+
+void trainWantsToEnter(){
+    int stationIndex = trainNextStation[TrainNumber];
+    trainWantsToAccess[(stationIndex*3 + TrainNumber)] = 1;
+}
+
+bool trainAccessGranted(){
+    int stationIndex = trainNextStation[TrainNumber];
+    return trainCanAccess[(stationIndex*3 + TrainNumber)];
+}
 </declaration>
-		<location id="id5" x="-935" y="-1028">
+		<location id="id8" x="-935" y="-1028">
 			<name x="-969" y="-1054">idle</name>
 		</location>
-		<location id="id6" x="-1215" y="-833">
+		<location id="id9" x="-1215" y="-833">
 			<name x="-1360" y="-825">waiting_in_a_station</name>
 		</location>
-		<location id="id7" x="-595" y="-833">
+		<location id="id10" x="-595" y="-833">
 			<name x="-595" y="-867">traveling</name>
 		</location>
-		<location id="id8" x="-1700" y="-833">
+		<location id="id11" x="-1700" y="-833">
 			<name x="-1887" y="-816">waiting_outside_a_station</name>
 		</location>
-		<location id="id9" x="-1215" y="-459">
+		<location id="id12" x="-1215" y="-459">
 			<name x="-1249" y="-442">out_of_power</name>
 		</location>
-		<location id="id10" x="-1215" y="-561">
+		<location id="id13" x="-1215" y="-561">
 			<name x="-1257" y="-544">out_of_time</name>
 		</location>
-		<init ref="id5"/>
+		<init ref="id8"/>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id10"/>
+			<source ref="id9"/>
+			<target ref="id13"/>
 			<label kind="guard" x="-1453" y="-782">trainTimeLeft[TrainNumber] == 0</label>
 		</transition>
 		<transition>
-			<source ref="id7"/>
-			<target ref="id10"/>
+			<source ref="id10"/>
+			<target ref="id13"/>
 			<label kind="guard" x="-1139" y="-587">trainTimeLeft[TrainNumber]==0</label>
 			<nail x="-722" y="-561"/>
 		</transition>
 		<transition>
-			<source ref="id8"/>
-			<target ref="id10"/>
+			<source ref="id11"/>
+			<target ref="id13"/>
 			<label kind="guard" x="-1479" y="-587">trainTimeLeft[TrainNumber]==0</label>
 			<nail x="-1547" y="-561"/>
 		</transition>
 		<transition>
-			<source ref="id5"/>
-			<target ref="id6"/>
+			<source ref="id8"/>
+			<target ref="id9"/>
 			<label kind="synchronisation" x="-909" y="-1037">initialization?</label>
 		</transition>
 		<transition>
-			<source ref="id8"/>
-			<target ref="id8"/>
+			<source ref="id11"/>
+			<target ref="id11"/>
 			<label kind="guard" x="-1955" y="-876">goOnCheck() and
 trainIsWaiting[TrainNumber]==true</label>
 			<label kind="synchronisation" x="-1955" y="-926">wait?</label>
@@ -509,8 +605,8 @@ updateTimeLeft()</label>
 			<nail x="-1700" y="-935"/>
 		</transition>
 		<transition>
-			<source ref="id7"/>
-			<target ref="id7"/>
+			<source ref="id10"/>
+			<target ref="id10"/>
 			<label kind="guard" x="-518" y="-791">trainDistanceToNextStation[TrainNumber] &gt; 0
 and goOnCheck()</label>
 			<label kind="assignment" x="-518" y="-825">loose_charge(), update_distance(),
@@ -519,8 +615,8 @@ updateTimeLeft()</label>
 			<nail x="-527" y="-833"/>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id6"/>
+			<source ref="id9"/>
+			<target ref="id9"/>
 			<label kind="guard" x="-1615" y="-977">trainCanLeaveActualStation[TrainNumber]==false
 and goOnCheck()</label>
 			<label kind="assignment" x="-1615" y="-1011">recharge(), updateIfTrainCanLeave(), updateTimeLeft(),
@@ -531,37 +627,36 @@ updateStationChan(1)</label>
 			<nail x="-1232" y="-935"/>
 		</transition>
 		<transition>
-			<source ref="id8"/>
-			<target ref="id9"/>
+			<source ref="id11"/>
+			<target ref="id12"/>
 			<label kind="guard" x="-1615" y="-485">trainActualCharge[TrainNumber]==0</label>
 			<nail x="-1700" y="-459"/>
 		</transition>
 		<transition>
-			<source ref="id7"/>
-			<target ref="id9"/>
+			<source ref="id10"/>
+			<target ref="id12"/>
 			<label kind="guard" x="-1028" y="-485">trainActualCharge[TrainNumber]==0</label>
 			<nail x="-595" y="-459"/>
 		</transition>
 		<transition>
-			<source ref="id8"/>
-			<target ref="id6"/>
-			<label kind="guard" x="-1598" y="-884">goOnCheck()</label>
+			<source ref="id11"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-1598" y="-884">goOnCheck() and trainAccessGranted()</label>
 			<label kind="synchronisation" x="-1598" y="-901">enter?</label>
-			<label kind="assignment" x="-1598" y="-867">trainIsWaiting[TrainNumber] = false,
-updateTravelInfo()</label>
+			<label kind="assignment" x="-1598" y="-867">updateTravelInfo()</label>
 		</transition>
 		<transition>
-			<source ref="id7"/>
-			<target ref="id8"/>
+			<source ref="id10"/>
+			<target ref="id11"/>
 			<label kind="guard" x="-1122" y="-731">trainDistanceToNextStation[TrainNumber] == 0
 and goOnCheck()</label>
-			<label kind="assignment" x="-1122" y="-697">trainIsWaiting[TrainNumber]=true</label>
+			<label kind="assignment" x="-1122" y="-697">trainWantsToEnter()</label>
 			<nail x="-765" y="-680"/>
 			<nail x="-1513" y="-680"/>
 		</transition>
 		<transition>
-			<source ref="id6"/>
-			<target ref="id7"/>
+			<source ref="id9"/>
+			<target ref="id10"/>
 			<label kind="guard" x="-1045" y="-884">trainCanLeaveActualStation[TrainNumber]
 and goOnCheck()</label>
 			<label kind="synchronisation" x="-1045" y="-901">free_truck!</label>
@@ -576,8 +671,9 @@ s2 = Station(2);
 t0 = Train(0);
 t1 = Train(1);
 t2 = Train(2);
+sm = StationManager();
 // List one or more processes to be composed into a system.
-system l, s0, s1, s2, t0, t1, t2;
+system l, s0, s1, s2, t0, t1, t2, sm;
     </system>
 	<queries>
 		<query>
