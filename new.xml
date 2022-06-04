@@ -18,26 +18,12 @@ second element is the distance in km from station 2 to station 3
 EXPRESSED IN UNITS
 */
 const int lineDistance[2] = { 23, 35 };
-
 /*
 first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
 */
 const int lineMaxDelay[2] = { 20, 30 };
-
-/*
-this is a sort of map: it provides information of where are currently the trains,
-the train is the INDEX so if for example Train(0) is at station 0, Train(1) is at
-station 1, and Train(2) is at station 2 is initialized like this:
-int whereIsTrain[3] = {0, 1, 2};
-*/
-int trainActualStation[3] = { 0, 0, 0 };
-
-/*
-same as above, but maps the next station for each train
-*/
-int trainNextStation[3] = { 1, 1, 1 };
 
 /*
 number of available trucks free in the INDEX station
@@ -48,22 +34,6 @@ int stationAvailableTrucks[3] = { 0, 2, 2 };
 number of total trucks free in the INDEX station
 */
 const int stationNumberOfTrucks[3] = { 3, 1, 2 };
-
-/*
-charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
-*/
-int trainActualCharge[3] = { 100, 5, 100 };
-
-/*
-this is the max charge of train INDEX
-*/
-const int trainMaxCharge[3] = { 100, 100, 100 };
-
-/*
-velocity of Train(i)
-EXPRESSED in UNITS/CLOCK
-*/
-const int trainVelocity[3] = { 10, 10, 10 };
 
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
@@ -103,6 +73,35 @@ Matrix used to know which train have gained the right to leave each station
 */
 bool trainCanLeave[3][3];
 
+/*
+this is the max charge of train INDEX
+*/
+const int trainMaxCharge[3] = { 100, 100, 100 };
+
+/*
+charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
+*/
+int trainActualCharge[3] = { 50, 5, 30 };
+
+/*
+this is a sort of map: it provides information of where are currently the trains,
+the train is the INDEX so if for example Train(0) is at station 0, Train(1) is at
+station 1, and Train(2) is at station 2 is initialized like this:
+int whereIsTrain[3] = {0, 1, 2};
+*/
+int trainActualStation[3]={ 0,0,0 };
+
+/*
+same as above, but maps the next station for each train
+*/
+int trainNextStation[3] = { 1, 1, 1 };
+
+/*
+velocity of Train(i)
+EXPRESSED in UNITS/CLOCK
+*/
+const int trainVelocity[3] = { 10, 10, 10 };
+
 
 /**********************************************************************************************
 /******************************* GLOBAL FUNCTIONS *********************************************
@@ -112,24 +111,10 @@ bool trainCanLeave[3][3];
 this function is to initialize everything, right now all the parameters are hard-coded 
 */
 void initialize_all(){
-}
-
-/*
-retrieve info about current max delay -- not used so far
-*/
-int getCurrentMaxDelay(int TrainNumber) {
-    int index;
-    if ( trainActualStation[TrainNumber] &lt; trainNextStation[TrainNumber] ) {
-        index = trainActualStation[TrainNumber];
-    }
-    else {
-        index = trainNextStation[TrainNumber];
-     }
-    return lineMaxDelay[index];
 }</declaration>
 	<template>
 		<name>Line</name>
-		<parameter>int LineNumber</parameter>
+		<parameter>int NumberTrains, int NumberStations</parameter>
 		<declaration>// Line Clocks
 
 // Line Variables
@@ -152,22 +137,25 @@ void initialize_all() {
             trainCanLeave[i][j] = false;
         }
     }
-}
-</declaration>
-		<location id="id0" x="-408" y="-459">
-			<name x="-433" y="-493">working</name>
+
+    for(i=0; i&lt;3; i++){
+    
+    }
+}</declaration>
+		<location id="id0" x="-646" y="-518">
+			<name x="-671" y="-552">working</name>
 		</location>
-		<location id="id1" x="-621" y="-459">
-			<name x="-637" y="-493">initial</name>
+		<location id="id1" x="-859" y="-518">
+			<name x="-875" y="-552">initial</name>
 			<committed/>
 		</location>
 		<init ref="id1"/>
 		<transition>
 			<source ref="id1"/>
 			<target ref="id0"/>
-			<label kind="synchronisation" x="-561" y="-476">initialization!</label>
-			<label kind="assignment" x="-561" y="-459">initialize_all()</label>
-			<nail x="-442" y="-459"/>
+			<label kind="synchronisation" x="-799" y="-535">initialization!</label>
+			<label kind="assignment" x="-799" y="-518">initialize_all()</label>
+			<nail x="-680" y="-518"/>
 		</transition>
 	</template>
 	<template>
@@ -610,7 +598,7 @@ and goOnCheck()</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
-l = Line(0);
+l = Line(1,1);
 s0 = Station(0);
 s1 = Station(1);
 s2 = Station(2);
