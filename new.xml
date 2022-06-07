@@ -30,7 +30,7 @@ first element is the distance in km from station 1 to station 2,
 second element is the distance in km from station 2 to station 3
 EXPRESSED IN UNITS
 */
-const int lineDistance[2] = { 23, 35 };
+const int lineDistance[2] = { 80, 70 };
 /*
 first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
@@ -46,7 +46,7 @@ int stationAvailableTrucks[3] = { 0, 1, 3 };
 /*
 number of total trucks free in the INDEX station
 */
-const int stationNumberOfTrucks[3] = { 3, 1, 2 };
+const int stationNumberOfTrucks[3] = { 3, 1, 3 };
 
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
@@ -56,7 +56,7 @@ bool trainGoingForward[3] = { true, true, true };
 /*
 current distance of each train to reach the next station -- Expressed in UNITS
 */
-int trainDistanceToNextStation[3] = { 23, 23, 23 };
+int trainDistanceToNextStation[3] = { 80, 80, 80 };
 
 /*
 current time left of each train to reach the next station -- Expressed in CLOCKs
@@ -89,12 +89,12 @@ bool trainCanLeave[3][3];
 /*
 this is the max charge of train INDEX
 */
-const int trainMaxCharge[3] = { 100, 100, 100 };
+const int trainMaxCharge[3] = { 200, 200, 200 };
 
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
 */
-int trainActualCharge[3] = { 100, 100, 100 };
+int trainActualCharge[3] = { 200, 200, 200 };
 
 /*
 this is a sort of map: it provides information of where are currently the trains,
@@ -537,7 +537,7 @@ bool checkPolicyThree(int trainIndex){
     if ( stationAvailableTrucks[stationIndex] == 0 and
          trainActualCharge[trainIndex] &gt;= trainDistanceToNextStation[trainIndex] * CHARGE_DROP)
             return true;
-    else if(trainActualCharge[trainIndex] &gt;= (PERC_DIST_TRAIN_MUST_COVER * trainDistanceToNextStation[trainIndex] * CHARGE_DROP)/100 )
+    else if(trainActualCharge[trainIndex] &gt;= (trainDistanceToNextStation[trainIndex] * CHARGE_DROP) )
             return true;
     else
             return false;
@@ -857,6 +857,14 @@ system l, s0, s1, s2, t0, t1, t2&lt;sm;
 		<query>
 			<formula>A&lt;&gt; (trainTimeLeft[0]&gt;0 &amp;&amp; trainTimeLeft[1] &gt; 0 &amp;&amp; trainTimeLeft[2] &gt; 0)</formula>
 			<comment>For all the states, it never happens that the train time left reaches 0</comment>
+		</query>
+		<query>
+			<formula>A[] (!t0.out_of_time and !t1.out_of_time and !t2.out_of_time)</formula>
+			<comment>for all states it is always true that no one of the trains is out of time</comment>
+		</query>
+		<query>
+			<formula>A[] (!t0.out_of_power and !t1.out_of_power and !t2.out_of_power)</formula>
+			<comment></comment>
 		</query>
 	</queries>
 </nta>
