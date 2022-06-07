@@ -41,7 +41,7 @@ const int lineMaxDelay[2] = { 50, 80 };
 /*
 number of available trucks free in the INDEX station
 */
-int stationAvailableTrucks[3] = { 0, 1, 2 };
+int stationAvailableTrucks[3] = { 0, 3, 3 };
 
 /*
 number of total trucks free in the INDEX station
@@ -256,6 +256,7 @@ void checkIfTrainCanEnter(){
     int i,j; //i is the station,j is the train
     int trainSavedCharge = 2000;
     int trainSavedIndex = -1;
+    bool found = false;
 
     int stationIndex; 
     for (i=0; i&lt;3; i++){
@@ -267,11 +268,12 @@ void checkIfTrainCanEnter(){
                     trainSavedIndex = j;
                     trainSavedCharge = trainActualCharge[j];
                     stationIndex = i;
+                    found = true;
                 } 
             }               
         }
     }
-    if(stationAvailableTrucks[stationIndex] &gt; 0) {
+    if(stationAvailableTrucks[stationIndex] &gt; 0 &amp;&amp; found) {
         trainCanAccess[stationIndex][trainSavedIndex] = true;
         stationAvailableTrucks[stationIndex] -= 1;
         canEnter = true;
