@@ -12,15 +12,15 @@ urgent chan waitingToLeave, waitingToEnter;
 /*
 channel declared urgent to inizialize every element of the system in the same moment
 */
-urgent broadcast chan initialization, updateStatus;
+urgent broadcast chan initialization, updateStatus, go;
 
 /*
 constant parameters of the system
 */
 const int R = 2;
 const int RECHARGE = 5;                 //how much charge a train will gain in a station
-const int CHARGE_DROP = 3;              //how much charge a train will lose while traveling
-const int CHARGE_DROP_WAIT = 2;        //how much charge a train will lose while waiting to enter a station  
+const int CHARGE_DROP = 2;              //how much charge a train will lose while traveling
+const int CHARGE_DROP_WAIT = 1;        //how much charge a train will lose while waiting to enter a station  
 
 const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;               //expressed in x/100 so in this case 80 refers to 80%
 const int PERC_DIST_TRAIN_MUST_COVER = 150;  //the train need to be able to cover at least 1.5x times the distance from next station
@@ -41,7 +41,7 @@ const int lineMaxDelay[2] = { 50, 80 };
 /*
 number of available trucks free in the INDEX station
 */
-int stationAvailableTrucks[3] = { 0, 3, 3 };
+int stationAvailableTrucks[3] = { 0, 1, 3 };
 
 /*
 number of total trucks free in the INDEX station
@@ -89,12 +89,12 @@ bool trainCanLeave[3][3];
 /*
 this is the max charge of train INDEX
 */
-const int trainMaxCharge[3] = { 200, 200, 200 };
+const int trainMaxCharge[3] = { 100, 100, 100 };
 
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
 */
-int trainActualCharge[3] = { 200, 200, 200 };
+int trainActualCharge[3] = { 100, 100, 100 };
 
 /*
 this is a sort of map: it provides information of where are currently the trains,
@@ -114,6 +114,8 @@ velocity of Train(i)
 EXPRESSED in UNITS/CLOCK
 */
 const int trainVelocity[3] = { 10, 10, 10 };
+
+int idTrainLeaving = 0;
 
 
 /**********************************************************************************************
@@ -158,6 +160,14 @@ void initialize_all() {
 			<committed/>
 		</location>
 		<init ref="id1"/>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-212" y="-399">go!</label>
+			<nail x="-365" y="-399"/>
+			<nail x="-212" y="-399"/>
+			<nail x="-212" y="-535"/>
+		</transition>
 		<transition>
 			<source ref="id1"/>
 			<target ref="id0"/>
@@ -255,7 +265,7 @@ check if train can enter with also the check on which train has the lower charge
 void checkIfTrainCanEnter(){
     int i,j; //i is the station,j is the train
     int trainSavedCharge = 2000;
-    int trainSavedIndex = -1;
+    int trainSavedIndex;
     bool found = false;
 
     int stationIndex; 
@@ -288,17 +298,16 @@ check if a train is willing to leave, so update the matrix trainCanLeave
 */
 void checkIfTrainCanLeave(){
     int i,j; //i is the station,j is the train
-    int stationIndex; 
+    int stationIndex;
     for (i=0; i&lt;3; i++){
-        for(j=0; j&lt;3; j++){
-            if(trainWantsToLeave[i][j] and (not trainCanLeave[i][j])){
+            if(trainWantsToLeave[i][idTrainLeaving] and (not trainCanLeave[i][idTrainLeaving])){
                 //no longer needed check policy here... the station manager always permits to leave because the train already made the checks
                 stationIndex = i;
-                trainCanLeave[i][j] = true;
+                trainCanLeave[i][idTrainLeaving] = true;
                 stationAvailableTrucks[stationIndex] += 1;
                 canLeave = true;
-            }                
-        }
+                return;
+            }
     }
 }
 
@@ -575,6 +584,15 @@ void updateTravelInfo() {
     trainCanAccess[stationIndex][TrainNumber] = false;
 }
 
+
+/*
+this function is used to save which of the trains intends to leave the station,
+introduced to solve the bug of checking who wants to leave in the checkIfTrainCanLeave() of the sm
+*/
+void updateIdTrainLeaving(){
+    idTrainLeaving = TrainNumber;
+}
+
 /*
 check if a train can proceed or must stop since 
 - either it is out of power
@@ -705,6 +723,7 @@ and reAsk==0</label>
 			<target ref="id18"/>
 			<label kind="guard" x="-2210" y="-884">goOnCheck() and
 not trainAccessGranted()</label>
+			<label kind="synchronisation" x="-2210" y="-850">go?</label>
 			<label kind="assignment" x="-2210" y="-943">loose_charge(CHARGE_DROP_WAIT),
 updateTimeLeft(),
 reAsk -= 1</label>
@@ -736,6 +755,7 @@ and goOnCheck()</label>
 			<label kind="guard" x="-1139" y="-875">goOnCheck() and 
 trainWantsToLeaveStation()</label>
 			<label kind="synchronisation" x="-1139" y="-892">waitingToLeave!</label>
+			<label kind="assignment" x="-1139" y="-841">updateIdTrainLeaving()</label>
 		</transition>
 		<transition>
 			<source ref="id12"/>
@@ -764,6 +784,7 @@ trainWantsToLeaveStation()</label>
 			<target ref="id13"/>
 			<label kind="guard" x="-518" y="-791">trainDistanceToNextStation[TrainNumber] &gt; 0
 and goOnCheck()</label>
+			<label kind="synchronisation" x="-518" y="-756">go?</label>
 			<label kind="assignment" x="-518" y="-825">loose_charge(CHARGE_DROP), 
 update_distance(), updateTimeLeft()</label>
 			<nail x="-527" y="-748"/>
@@ -774,6 +795,7 @@ update_distance(), updateTimeLeft()</label>
 			<target ref="id12"/>
 			<label kind="guard" x="-1445" y="-960">not trainWantsToLeaveStation()
 and goOnCheck()</label>
+			<label kind="synchronisation" x="-1444" y="-1028">go?</label>
 			<label kind="assignment" x="-1445" y="-994">updateIfTrainWantsToLeave(),
 updateTimeLeft(), recharge()</label>
 			<nail x="-1215" y="-1011"/>
