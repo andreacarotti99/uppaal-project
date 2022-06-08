@@ -8,7 +8,8 @@ clock general_clock;
 
 
 chan enter, start, wait, leave;
-urgent chan waitingToLeave, waitingToEnter;
+urgent chan waitingToEnter,waitingToLeave;
+chan priority waitingToEnter &lt; waitingToLeave;
 /*
 channel declared urgent to inizialize every element of the system in the same moment
 */
@@ -39,29 +40,39 @@ EXPRESSED IN CLOCKS
 const int lineMaxDelay[2] = { 50, 80 };
 
 /*
-number of available trucks free in the INDEX station
-*/
-int stationAvailableTrucks[3] = { 0, 1, 3 };
-
-/*
 number of total trucks free in the INDEX station
 */
 const int stationNumberOfTrucks[3] = { 3, 1, 3 };
 
 /*
+this is the max charge of train INDEX
+*/
+const int trainMaxCharge[3] = { 200, 200, 200 };
+
+/*
+velocity of Train(i) EXPRESSED in UNITS/CLOCK
+*/
+const int trainVelocity[3] = { 20, 10, 15 };
+
+/*
+number of available trucks free in the INDEX station
+*/
+int stationAvailableTrucks[3] = { 2, 0, 2 };
+
+/*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
 */
-bool trainGoingForward[3] = { true, true, true };
+bool trainGoingForward[3] = { true, false, false };
 
 /*
 current distance of each train to reach the next station -- Expressed in UNITS
 */
-int trainDistanceToNextStation[3] = { 80, 80, 80 };
+int trainDistanceToNextStation[3] = { 80, 80, 70 };
 
 /*
 current time left of each train to reach the next station -- Expressed in CLOCKs
 */
-int trainTimeLeft[3] = { 50, 50, 50 };
+int trainTimeLeft[3] = { 50, 50, 80 };
 
 /*
 Matrix useful to know which train wants to access each station
@@ -86,10 +97,6 @@ Matrix used to know which train have gained the right to leave each station
 */
 bool trainCanLeave[3][3];
 
-/*
-this is the max charge of train INDEX
-*/
-const int trainMaxCharge[3] = { 200, 200, 200 };
 
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
@@ -102,18 +109,12 @@ the train is the INDEX so if for example Train(0) is at station 0, Train(1) is a
 station 1, and Train(2) is at station 2 is initialized like this:
 int whereIsTrain[3] = {0, 1, 2};
 */
-int trainActualStation[3]={ 0,0,0 };
+int trainActualStation[3]={ 0,1,2 };
 
 /*
 same as above, but maps the next station for each train
 */
-int trainNextStation[3] = { 1, 1, 1 };
-
-/*
-velocity of Train(i)
-EXPRESSED in UNITS/CLOCK
-*/
-const int trainVelocity[3] = { 10, 10, 10 };
+int trainNextStation[3] = { 1, 0, 1 };
 
 int idTrainLeaving = 0;
 
