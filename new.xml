@@ -26,58 +26,60 @@ const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose whil
 const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;        //expressed in x/100 so in this case 80 refers to 80%
 const int PERC_DIST_TRAIN_MUST_COVER = 150;        //the train need to be able to cover at least 1.5x times the distance from next station
 const int TAU = 10000;
+const int T = 3;                                   //number of trains
+const int S = 4;                                   //number of stations
 /*
 first element is the distance in km from station 1 to station 2, 
 second element is the distance in km from station 2 to station 3
 EXPRESSED IN UNITS
 */
-const int lineDistance[2] = { 80, 70 };
+const int lineDistance[S-1] = { 80, 70, 50 };
 /*
 first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
 */
-const int lineMaxDelay[2] = { 40, 50 };
+const int lineMaxDelay[S-1] = { 50, 40, 30 };
 
 /*
 number of total trucks free in the INDEX station
 */
-const int stationNumberOfTrucks[3] = { 3, 1, 3 };
+const int stationNumberOfTrucks[S] = { 3, 1, 3, 2 };
 
 /*
 this is the max charge of train INDEX
 */
-const int trainMaxCharge[3] = { 170, 170, 170 };
+const int trainMaxCharge[T] = { 170, 170, 170 };
 
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
 */
-int trainActualCharge[3] = { 170, 170, 170 };
+int trainActualCharge[T] = { 170, 170, 170 };
 
 /*
 velocity of Train(i) EXPRESSED in UNITS/CLOCK
 */
-const int trainVelocity[3] = { 20, 10, 15 };
+const int trainVelocity[T] = { 20, 10, 15 };
 
 /*
 number of available trucks free in the INDEX station
 */
-int stationAvailableTrucks[3] = { 2, 0, 2 };
+int stationAvailableTrucks[S] = { 2, 0, 2, 2 };
 
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
 */
-bool trainGoingForward[3] = { true, false, false };
+bool trainGoingForward[T] = { true, false, false };
 
 /*
 current distance of each train to reach the next station -- Expressed in UNITS
 */
-int trainDistanceToNextStation[3] = { 80, 80, 70 };
+int trainDistanceToNextStation[T] = { 80, 80, 70 };
 
 /*
 current time left of each train to reach the next station -- Expressed in CLOCKs
 */
-int trainTimeLeft[3] = { 40, 40, 50 };
+int trainTimeLeft[T] = { 40, 40, 50 };
 
 /*
 Matrix useful to know which train wants to access each station
@@ -86,21 +88,21 @@ s0    false  false    false
 s1    false  false    false
 s2    false  false    false
 */
-bool trainWantsToAccess[3][3];
+bool trainWantsToAccess[S][T];
 /*
 Matrix used to know which train have gained access to each station
 */
-bool trainCanAccess[3][3];
+bool trainCanAccess[S][T];
 
 /*
 Matrix used to know which train wants to leave the station
 */
-bool trainWantsToLeave[3][3];
+bool trainWantsToLeave[S][T];
 
 /*
 Matrix used to know which train have gained the right to leave each station
 */
-bool trainCanLeave[3][3];
+bool trainCanLeave[S][T];
 
 
 /*
@@ -109,12 +111,12 @@ the train is the INDEX so if for example Train(0) is at station 0, Train(1) is a
 station 1, and Train(2) is at station 2 is initialized like this:
 int whereIsTrain[3] = {0, 1, 2};
 */
-int trainActualStation[3]={ 0,1,2 };
+int trainActualStation[T]={ 0,1,2 };
 
 /*
 same as above, but maps the next station for each train
 */
-int trainNextStation[3] = { 1, 0, 1 };
+int trainNextStation[T] = { 1, 0, 1 };
 
 int idTrainLeaving = 0;
 
@@ -140,8 +142,8 @@ typedef struct{
 
 void initialize_all() {
     int i,j;
-    for(i=0; i&lt;3; i++) {
-        for(j=0; j&lt;3; j++){
+    for(i=0; i&lt;S; i++) {
+        for(j=0; j&lt;T; j++){
             trainWantsToAccess[i][j] = false;
             trainCanAccess[i][j] = false;
             trainWantsToLeave[i][j] = false;
@@ -149,7 +151,7 @@ void initialize_all() {
         }
     }
 
-    for(i=0; i&lt;3; i++){
+    for(i=0; i&lt;T; i++){
     
     }
 }</declaration>
@@ -245,8 +247,8 @@ if so update the matrix "trainCanAccess"
 void checkIfTrainCanEnterOld(){
     int i,j; //i is the station,j is the train
     int stationIndex; 
-    for (i=0; i&lt;3; i++){
-        for(j=0; j&lt;3; j++){
+    for (i=0; i&lt;S; i++){
+        for(j=0; j&lt;T; j++){
             if(trainWantsToAccess[i][j] and (not trainCanAccess[i][j])){
                 stationIndex = i;
                 if(stationAvailableTrucks[stationIndex] &gt; 0) {
@@ -270,8 +272,8 @@ void checkIfTrainCanEnter(){
     bool found = false;
 
     int stationIndex; 
-    for (i=0; i&lt;3; i++){
-        for(j=0; j&lt;3; j++){
+    for (i=0; i&lt;S; i++){
+        for(j=0; j&lt;T; j++){
             if(trainWantsToAccess[i][j] and (not trainCanAccess[i][j])){
                 //check whether the train was the one with the least charge
 
@@ -300,7 +302,7 @@ check if a train is willing to leave, so update the matrix trainCanLeave
 void checkIfTrainCanLeave(){
     int i,j; //i is the station,j is the train
     int stationIndex;
-    for (i=0; i&lt;3; i++){
+    for (i=0; i&lt;S; i++){
             if(trainWantsToLeave[i][idTrainLeaving] and (not trainCanLeave[i][idTrainLeaving])){
                 //no longer needed check policy here... the station manager always permits to leave because the train already made the checks
                 stationIndex = i;
@@ -444,7 +446,7 @@ function used to update the next station of each train
 */
 void updateNextStation(int trainId) {
     if( trainGoingForward[trainId] ) {
-        if(trainActualStation[trainId] &lt; 2 )
+        if(trainActualStation[trainId] &lt; (S-1) )
             trainNextStation[trainId] += 1;
         else{
             trainGoingForward[trainId] = false; //end of line reached! change direction
@@ -519,7 +521,7 @@ second policy (useless just for testing purpose):
 bool checkPolicyTwo(int trainIndex){
     int i;
     int totalLineDistance = 0;
-    for (i = 0; i &lt; 2; i++){
+    for (i = 0; i &lt; (S-1); i++){
         totalLineDistance += lineDistance[i];
     }
     if (trainActualCharge[trainIndex] &gt;= totalLineDistance * CHARGE_DROP)
@@ -736,8 +738,8 @@ and reAsk==0</label>
 			<target ref="id18"/>
 			<label kind="guard" x="-2210" y="-884">goOnCheck() and
 not trainAccessGranted()</label>
-			<label kind="synchronisation" x="-2210" y="-850">go?</label>
-			<label kind="assignment" x="-2210" y="-943">loose_charge(CHARGE_DROP_WAIT),
+			<label kind="synchronisation" x="-2210" y="-952">go?</label>
+			<label kind="assignment" x="-2210" y="-935">loose_charge(CHARGE_DROP_WAIT),
 updateTimeLeft(),
 reAsk -= 1</label>
 			<nail x="-2218" y="-833"/>
@@ -765,15 +767,15 @@ and goOnCheck()</label>
 		<transition>
 			<source ref="id12"/>
 			<target ref="id17"/>
-			<label kind="guard" x="-1139" y="-875">goOnCheck() and 
+			<label kind="guard" x="-1130" y="-884">goOnCheck() and 
 trainWantsToLeaveStation()</label>
-			<label kind="synchronisation" x="-1139" y="-892">waitingToLeave!</label>
-			<label kind="assignment" x="-1139" y="-841">updateIdTrainLeaving()</label>
+			<label kind="synchronisation" x="-1130" y="-901">waitingToLeave!</label>
+			<label kind="assignment" x="-1130" y="-850">updateIdTrainLeaving()</label>
 		</transition>
 		<transition>
 			<source ref="id12"/>
 			<target ref="id16"/>
-			<label kind="guard" x="-1453" y="-782">trainTimeLeft[TrainNumber] == 0</label>
+			<label kind="guard" x="-1292" y="-773">timeOver()</label>
 		</transition>
 		<transition>
 			<source ref="id13"/>
@@ -797,7 +799,7 @@ trainWantsToLeaveStation()</label>
 			<target ref="id13"/>
 			<label kind="guard" x="-518" y="-791">trainDistanceToNextStation[TrainNumber] &gt; 0
 and goOnCheck()</label>
-			<label kind="synchronisation" x="-518" y="-756">go?</label>
+			<label kind="synchronisation" x="-518" y="-841">go?</label>
 			<label kind="assignment" x="-518" y="-825">loose_charge(CHARGE_DROP), 
 update_distance(), updateTimeLeft()</label>
 			<nail x="-527" y="-748"/>
@@ -808,11 +810,11 @@ update_distance(), updateTimeLeft()</label>
 			<target ref="id12"/>
 			<label kind="guard" x="-1445" y="-960">not trainWantsToLeaveStation()
 and goOnCheck()</label>
-			<label kind="synchronisation" x="-1444" y="-1028">go?</label>
+			<label kind="synchronisation" x="-1445" y="-1011">go?</label>
 			<label kind="assignment" x="-1445" y="-994">updateIfTrainWantsToLeave(),
 updateTimeLeft(), recharge()</label>
-			<nail x="-1215" y="-1011"/>
-			<nail x="-1462" y="-1011"/>
+			<nail x="-1215" y="-1020"/>
+			<nail x="-1462" y="-1020"/>
 			<nail x="-1462" y="-918"/>
 			<nail x="-1249" y="-918"/>
 		</transition>
@@ -851,12 +853,13 @@ l = Line(1,1);
 s0 = Station(0);
 s1 = Station(1);
 s2 = Station(2);
+s3 = Station(3);
 t0 = Train(0);
 t1 = Train(1);
 t2 = Train(2);
 sm = StationManager();
 // List one or more processes to be composed into a system.
-system l, s0, s1, s2, t0, t1, t2&lt;sm;
+system l, s0, s1, s2, s3, t0, t1, t2&lt;sm;
     </system>
 	<queries>
 		<query>
