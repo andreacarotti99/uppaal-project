@@ -105,6 +105,7 @@ Matrix used to know which train have gained the right to leave each station
 */
 bool trainCanLeave[S][T];
 
+bool trainIsWaiting[S][T];
 
 /*
 this is a sort of map: it provides information of where are currently the trains,
@@ -149,6 +150,7 @@ void initialize_all() {
             trainCanAccess[i][j] = false;
             trainWantsToLeave[i][j] = false;
             trainCanLeave[i][j] = false;
+            trainIsWaiting[i][j] = false;
         }
     }
 
@@ -296,6 +298,9 @@ void checkIfTrainCanEnter(){
                 } 
             }               
         }
+    }
+    if (stationAvailableTrucks[stationIndex] == 0 &amp;&amp; found) {
+        trainIsWaiting[trainSavedIndex][trainSavedIndex]=true;
     }
     if(stationAvailableTrucks[stationIndex] &gt; 0 &amp;&amp; found) {
         trainCanAccess[stationIndex][trainSavedIndex] = true;
@@ -623,11 +628,12 @@ bool trainWaiting(int stationIndex) {
 
 bool trainWorseThanCurrent(int stationIndex) {
     int j;
-    for (j=0; j&lt;T; j++)
-        if (trainWantsToAccess[stationIndex][j]) {
+    for (j=0; j&lt;T; j++){
+        if (trainIsWaiting[stationIndex][j]) {
             if( min(trainTimeLeft[j], trainActualCharge[j]) &lt; min(trainTimeLeft[TrainNumber], trainActualCharge[TrainNumber]) )
                 return true;
         }
+    }
     return false;
 
 }
@@ -639,7 +645,13 @@ void updateIfTrainWantsToLeave(){
 
     //check if it a critical situation
     int stationIndex = trainActualStation[TrainNumber];
-    if(stationAvailableTrucks[stationIndex] == 0 and trainWaiting(stationIndex)) {
+    bool waitingTrain;
+    int i;
+    for (i=0; i&lt;T; i++){
+        if(trainIsWaiting[stationIndex][i] == true)
+            waitingTrain = true;
+    }
+    if(stationAvailableTrucks[stationIndex] == 0 and waitingTrain) {
         if (trainWorseThanCurrent(stationIndex))
             trainWantsToLeave[stationIndex][TrainNumber] = true;
     }
@@ -668,6 +680,7 @@ void updateTravelInfo() {
     
     trainWantsToAccess[stationIndex][TrainNumber] = false;
     trainCanAccess[stationIndex][TrainNumber] = false;
+    trainIsWaiting[stationIndex][TrainNumber] = false;
 }
 
 
