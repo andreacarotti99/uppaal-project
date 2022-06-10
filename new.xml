@@ -14,7 +14,6 @@ chan priority waitingToEnter &lt; waitingToLeave;
 channel declared urgent to inizialize every element of the system in the same moment
 */
 urgent broadcast chan initialization, updateStatus, go;
-
 /*
 constant parameters of the system
 */
@@ -25,6 +24,8 @@ const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose whil
 
 const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;        //expressed in x/100 so in this case 80 refers to 80%
 const int PERC_DIST_TRAIN_MUST_COVER = 150;        //the train need to be able to cover at least 1.5x times the distance from next station
+const int SAFE_CHARGE_MULT = 200;                  //multiplier to safely proceed to next station (charge)
+const int SAFE_TIME_MULT = 150;                    //multiplier to safely proceed to next station (time)
 const int TAU = 10000;
 const int T = 4;                                   //number of trains
 const int S = 4;                                   //number of stations
@@ -39,7 +40,7 @@ first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
 */
-const int lineMaxDelay[S-1] = { 50, 40, 30 };
+const int lineMaxDelay[S-1] = { 50, 40, 40 };
 
 /*
 number of total trucks free in the INDEX station
@@ -54,12 +55,12 @@ const int trainMaxCharge[T] = { 170, 170, 170, 170 };
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
 */
-int trainActualCharge[T] = { 170, 170, 170, 170 };
+int trainActualCharge[T] = { 50, 170, 170, 170 };
 
 /*
 velocity of Train(i) EXPRESSED in UNITS/CLOCK
 */
-const int trainVelocity[T] = { 20, 10, 15, 15 };
+const int trainVelocity[T] = { 5, 3, 4, 5 };
 
 /*
 number of available trucks free in the INDEX station
@@ -69,7 +70,7 @@ int stationAvailableTrucks[S] = { 1, 0, 2, 2 };
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
 */
-bool trainGoingForward[T] = { true, false, false, false };
+bool trainGoingForward[T] = { true, false, false, true };
 
 /*
 current distance of each train to reach the next station -- Expressed in UNITS
@@ -262,12 +263,20 @@ void checkIfTrainCanEnterOld(){
     }
 }
 
+
+int min(int a, int b){
+    if (a &lt;= b)
+        return a;
+    else return b;
+}
+
+
 /*
 check if train can enter with also the check on which train has the lower charge
 */
 void checkIfTrainCanEnter(){
     int i,j; //i is the station,j is the train
-    int trainSavedCharge = 2000;
+    int minT = 2000;
 
 
     int trainSavedIndex;
@@ -279,9 +288,9 @@ void checkIfTrainCanEnter(){
             if(trainWantsToAccess[i][j] and (not trainCanAccess[i][j])){
                 //check whether the train was the one with the least charge
 
-                if (trainActualCharge[j] &lt; trainSavedCharge){
+                if ( min (trainActualCharge[j], trainTimeLeft[j]) &lt; minT){
                     trainSavedIndex = j;
-                    trainSavedCharge = trainActualCharge[j];
+                    minT = min (trainActualCharge[j], trainTimeLeft[j]);
                     stationIndex = i;
                     found = true;
                 } 
@@ -316,11 +325,6 @@ void checkIfTrainCanLeave(){
     }
 }
 
-int min(int a, int b){
-    if (a &lt;= b)
-        return a;
-    else return b;
-}
 
 
 
@@ -420,6 +424,12 @@ int reAsk;
 /******************************** TRAIN FUNCTIONS *********************************************
 /**********************************************************************************************/
 
+int min(int a, int b){
+    if (a &lt;= b)
+        return a;
+    else return b;
+}
+
 /*
 function to raise the battery level of a train -- policy needed
 */
@@ -515,8 +525,8 @@ first policy:
  - if the distance it can cover is at least 1.5x of the distance to next station multiplied by the drop charge factor
 */
 bool checkPolicyOne(int trainIndex){
-    if ( trainActualCharge[trainIndex] &gt;= (PERC_CHARGE_TRAIN_MUST_HAVE * trainMaxCharge[trainIndex])/100  and 
-         trainActualCharge[trainIndex] &gt;= (PERC_DIST_TRAIN_MUST_COVER * trainDistanceToNextStation[trainIndex] * CHARGE_DROP)/100  )
+    if ( trainActualCharge[trainIndex] &gt;= ((PERC_CHARGE_TRAIN_MUST_HAVE * trainMaxCharge[trainIndex])/100)  and 
+         trainActualCharge[trainIndex] &gt;= ((PERC_DIST_TRAIN_MUST_COVER * trainDistanceToNextStation[trainIndex] * CHARGE_DROP)/100)  )
             return true;
     else
             return false;
@@ -567,11 +577,33 @@ bool checkPolicyFour(int trainIndex){
 }
 
 bool checkPolicyFive(){
-    if (trainTimeLeft[TrainNumber] &lt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])* CHARGE_DROP + 10) ||
+    if (trainTimeLeft[TrainNumber] == ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])) ||
         trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
         return true;
     else
         return false;
+}
+
+bool checkPolicy6(){
+    if ( trainTimeLeft[TrainNumber] &lt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber]) * (SAFE_TIME_MULT/100)) )
+        return true;
+    else
+        if (trainActualCharge[TrainNumber] &gt;=  ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])*CHARGE_DROP * (SAFE_CHARGE_MULT/100)) )
+            return true;
+        else
+            return false;
+}
+
+bool checkPolicy6_old(){
+    if ( trainTimeLeft[TrainNumber] &gt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber]) * (SAFE_TIME_MULT/100)) 
+               and
+        trainActualCharge[TrainNumber] &gt;=  ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])*CHARGE_DROP * (SAFE_CHARGE_MULT/100)) ){
+        return true;
+    }
+    else{
+        return false;
+    }
+        
 }
 
 /********************************************************************/
@@ -579,22 +611,45 @@ bool checkPolicyFive(){
 /********************************************************************/
 
 
+bool trainWaiting(int stationIndex) {
+    int j;
+    for (j=0; j&lt;T; j++) {
+        if (trainWantsToAccess[stationIndex][j])
+            return true;
+    }
+    return false;
+     
+}
 
+bool trainWorseThanCurrent(int stationIndex) {
+    int j;
+    for (j=0; j&lt;T; j++)
+        if (trainWantsToAccess[stationIndex][j]) {
+            if( min(trainTimeLeft[j], trainActualCharge[j]) &lt; min(trainTimeLeft[TrainNumber], trainActualCharge[TrainNumber]) )
+                return true;
+        }
+    return false;
 
+}
 
 /*
-naive implementation of policy to let a train leave the station
+implementation of policy to let a train leave the station
 */
 void updateIfTrainWantsToLeave(){
-    if( (trainActualCharge[TrainNumber] &gt;= trainDistanceToNextStation[TrainNumber]* CHARGE_DROP) and                        //check the charge
-        (trainTimeLeft[TrainNumber] &gt; (trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])) )             //check the time left
-    {
-        if (checkPolicyFive()){
-            int stationIndex = trainActualStation[TrainNumber];
+
+    //check if it a critical situation
+    int stationIndex = trainActualStation[TrainNumber];
+    if(stationAvailableTrucks[stationIndex] == 0 and trainWaiting(stationIndex)) {
+        if (trainWorseThanCurrent(stationIndex))
             trainWantsToLeave[stationIndex][TrainNumber] = true;
-        }
+    }
+
+    //check my policies greedy -- max charge
+    if (checkPolicy6()){
+        trainWantsToLeave[stationIndex][TrainNumber] = true;
     }
 }
+
 /*
 function used to update all the information for the travel the train is going to run into:
 - train current station
@@ -896,7 +951,7 @@ system l, s0, s1, s2, s3, t0, t1, t2, t3&lt;sm;
 			<comment>for all states it is always true that no one of the trains is out of time</comment>
 		</query>
 		<query>
-			<formula>A[] (!t0.out_of_power and !t1.out_of_power and !t2.out_of_power)</formula>
+			<formula>A[] (!t0.out_of_power and !t1.out_of_power and !t2.out_of_power and !t3.out_of_power)</formula>
 			<comment></comment>
 		</query>
 	</queries>
