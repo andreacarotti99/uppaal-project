@@ -26,7 +26,7 @@ const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose whil
 const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;        //expressed in x/100 so in this case 80 refers to 80%
 const int PERC_DIST_TRAIN_MUST_COVER = 150;        //the train need to be able to cover at least 1.5x times the distance from next station
 const int TAU = 10000;
-const int T = 3;                                   //number of trains
+const int T = 4;                                   //number of trains
 const int S = 4;                                   //number of stations
 /*
 first element is the distance in km from station 1 to station 2, 
@@ -49,37 +49,37 @@ const int stationNumberOfTrucks[S] = { 3, 1, 3, 2 };
 /*
 this is the max charge of train INDEX
 */
-const int trainMaxCharge[T] = { 170, 170, 170 };
+const int trainMaxCharge[T] = { 170, 170, 170, 170 };
 
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
 */
-int trainActualCharge[T] = { 170, 170, 170 };
+int trainActualCharge[T] = { 170, 170, 170, 170 };
 
 /*
 velocity of Train(i) EXPRESSED in UNITS/CLOCK
 */
-const int trainVelocity[T] = { 20, 10, 15 };
+const int trainVelocity[T] = { 20, 10, 15, 15 };
 
 /*
 number of available trucks free in the INDEX station
 */
-int stationAvailableTrucks[S] = { 2, 0, 2, 2 };
+int stationAvailableTrucks[S] = { 1, 0, 2, 2 };
 
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
 */
-bool trainGoingForward[T] = { true, false, false };
+bool trainGoingForward[T] = { true, false, false, false };
 
 /*
 current distance of each train to reach the next station -- Expressed in UNITS
 */
-int trainDistanceToNextStation[T] = { 80, 80, 70 };
+int trainDistanceToNextStation[T] = { 80, 80, 70, 80 };
 
 /*
 current time left of each train to reach the next station -- Expressed in CLOCKs
 */
-int trainTimeLeft[T] = { 40, 40, 50 };
+int trainTimeLeft[T] = { 40, 40, 50, 40 };
 
 /*
 Matrix useful to know which train wants to access each station
@@ -111,12 +111,12 @@ the train is the INDEX so if for example Train(0) is at station 0, Train(1) is a
 station 1, and Train(2) is at station 2 is initialized like this:
 int whereIsTrain[3] = {0, 1, 2};
 */
-int trainActualStation[T]={ 0,1,2 };
+int trainActualStation[T]={ 0,1,2, 0 };
 
 /*
 same as above, but maps the next station for each train
 */
-int trainNextStation[T] = { 1, 0, 1 };
+int trainNextStation[T] = { 1, 0, 1, 1 };
 
 int idTrainLeaving = 0;
 
@@ -268,6 +268,8 @@ check if train can enter with also the check on which train has the lower charge
 void checkIfTrainCanEnter(){
     int i,j; //i is the station,j is the train
     int trainSavedCharge = 2000;
+
+
     int trainSavedIndex;
     bool found = false;
 
@@ -312,6 +314,12 @@ void checkIfTrainCanLeave(){
                 return;
             }
     }
+}
+
+int min(int a, int b){
+    if (a &lt;= b)
+        return a;
+    else return b;
 }
 
 
@@ -558,6 +566,14 @@ bool checkPolicyFour(int trainIndex){
             return false;
 }
 
+bool checkPolicyFive(){
+    if (trainTimeLeft[TrainNumber] &lt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])* CHARGE_DROP + 10) ||
+        trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
+        return true;
+    else
+        return false;
+}
+
 /********************************************************************/
 /*********************************END POLICIES***********************/
 /********************************************************************/
@@ -573,7 +589,7 @@ void updateIfTrainWantsToLeave(){
     if( (trainActualCharge[TrainNumber] &gt;= trainDistanceToNextStation[TrainNumber]* CHARGE_DROP) and                        //check the charge
         (trainTimeLeft[TrainNumber] &gt; (trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])) )             //check the time left
     {
-        if (checkPolicyFour(TrainNumber)){
+        if (checkPolicyFive()){
             int stationIndex = trainActualStation[TrainNumber];
             trainWantsToLeave[stationIndex][TrainNumber] = true;
         }
@@ -857,21 +873,22 @@ s3 = Station(3);
 t0 = Train(0);
 t1 = Train(1);
 t2 = Train(2);
+t3 = Train(3);
 sm = StationManager();
 // List one or more processes to be composed into a system.
-system l, s0, s1, s2, s3, t0, t1, t2&lt;sm;
+system l, s0, s1, s2, s3, t0, t1, t2, t3&lt;sm;
     </system>
 	<queries>
 		<query>
-			<formula>E&lt;&gt; (t0.out_of_time or t1.out_of_time or t2.out_of_time)</formula>
+			<formula>E&lt;&gt; (t0.out_of_time or t1.out_of_time or t2.out_of_time or t3.out_of_time)</formula>
 			<comment></comment>
 		</query>
 		<query>
-			<formula>E&lt;&gt; (t0.out_of_power or t1.out_of_power or t2.out_of_power)</formula>
+			<formula>E&lt;&gt; (t0.out_of_power or t1.out_of_power or t2.out_of_power or t3._out_of_power)</formula>
 			<comment></comment>
 		</query>
 		<query>
-			<formula>A&lt;&gt; (trainTimeLeft[0]&gt;0 &amp;&amp; trainTimeLeft[1] &gt; 0 &amp;&amp; trainTimeLeft[2] &gt; 0)</formula>
+			<formula>A[] (trainTimeLeft[0]&gt;0 &amp;&amp; trainTimeLeft[1] &gt; 0 &amp;&amp; trainTimeLeft[2] &gt; 0 &amp;&amp; trainTimeLeft[3] &gt; 0)</formula>
 			<comment>For all the states, it never happens that the train time left reaches 0</comment>
 		</query>
 		<query>
