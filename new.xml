@@ -4,9 +4,6 @@
 	<declaration>/**********************************************************************************************
 /******************************* GLOBAL VARIABLES *********************************************
 /**********************************************************************************************/
-clock general_clock;
-
-
 chan enter, start, wait, leave;
 urgent chan waitingToEnter,waitingToLeave;
 chan priority waitingToEnter &lt; waitingToLeave;
@@ -136,21 +133,16 @@ int min(int a, int b){
     if (a &lt;= b)
         return a;
     else return b;
+}
+
+int max (int a, int b) {
+    if (a&gt;b) return a;
+    else return b;
 }</declaration>
 	<template>
 		<name>Line</name>
 		<parameter>int numLines</parameter>
-		<declaration>// Line Clocks
-
-// Line Variables
-/*
-typedef struct{
-    int distance[2];    //distance (in km) between each pair of consecutive stations
-    int max_delay[2];    //maximum time to reach the following station: associated to each pair of consecutive stations
-}line;
-*/
-
-// Line Functions 
+		<declaration>// Line Functions 
 
 void initialize_all() {
     int i,j;
@@ -192,8 +184,7 @@ void initialize_all() {
 	<template>
 		<name>Station</name>
 		<parameter>const station_t StationNumber</parameter>
-		<declaration>
-/*
+		<declaration>/*
 retrieves the # of available trucks
 */
 int availableTrucks(){
@@ -557,11 +548,6 @@ bool checkPolicyFive(){
         return true;
     else
         return false;
-}
-
-int max (int a, int b) {
-    if (a&gt;b) return a;
-    else return b;
 }
 
 bool checkPolicy6(){
