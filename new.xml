@@ -19,14 +19,14 @@ const int RECHARGE = 5;                 //how much charge a train will gain in a
 const int CHARGE_DROP = 2;              //how much charge a train will lose while traveling
 const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose while waiting to enter a station  
 
-const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;        //expressed in x/100 so in this case 80 refers to 80%
-const int PERC_DIST_TRAIN_MUST_COVER = 150;        //the train need to be able to cover at least 1.5x times the distance from next station
 const int SAFE_CHARGE_MULT = 100;                  //multiplier to safely proceed to next station (charge)
 const int SAFE_TIME_MULT = 200;                    //multiplier to safely proceed to next station (time)
-const int TAU = 10000;
 const int T = 4;                                   //number of trains
 const int S = 5;                                   //number of stations
 
+/*
+STRUCTS
+*/
 typedef int[0,S-1] station_t;
 typedef int[0,T-1] train_t;
 
@@ -35,13 +35,14 @@ first element is the distance in km from station 1 to station 2,
 second element is the distance in km from station 2 to station 3
 EXPRESSED IN UNITS
 */
-int lineDistance[S-1]={90,70, 50, 90};
+int lineDistance[S-1]={130,110, 90, 130};
+
 /*
 first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
 */                            //    30  22 15 30
-const int lineMaxDelay[S-1] = { 190, 170, 150, 190 };
+const int lineMaxDelay[S-1] = { 90, 70, 60, 90 };
 
 /*
 number of total trucks free in the INDEX station
@@ -49,14 +50,17 @@ number of total trucks free in the INDEX station
 const int stationNumberOfTrucks[S] = { 3, 1, 3, 2, 2 };
 
 /*
-this is the max charge of train INDEX
+this is a sort of map: it provides information of where are currently the trains,
+the train is the INDEX so if for example Train(0) is at station 0, Train(1) is at
+station 1, and Train(2) is at station 2 is initialized like this:
+int whereIsTrain[3] = {0, 1, 2};
 */
-const int trainMaxCharge[T] = { 100, 100, 100, 100 };
+int trainActualStation[T]={ 0,1,2, 0 };
 
 /*
-charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
+same as above, but maps the next station for each train
 */
-int trainActualCharge[T] = { 100, 100, 100, 100 };
+int trainNextStation[T] = { 1, 0, 1, 1 };
 
 /*
 velocity of Train(i) EXPRESSED in UNITS/CLOCK
@@ -108,22 +112,17 @@ bool trainCanLeave[S][T];
 
 bool trainIsWaiting[S][T];
 
-
-
-/*
-this is a sort of map: it provides information of where are currently the trains,
-the train is the INDEX so if for example Train(0) is at station 0, Train(1) is at
-station 1, and Train(2) is at station 2 is initialized like this:
-int whereIsTrain[3] = {0, 1, 2};
-*/
-int trainActualStation[T]={ 0,1,2, 0 };
-
-/*
-same as above, but maps the next station for each train
-*/
-int trainNextStation[T] = { 1, 0, 1, 1 };
-
 int idTrainLeaving = 0;
+
+/*
+this is the max charge of train INDEX
+*/
+int trainMaxCharge[T];
+
+/*
+charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
+*/
+int trainActualCharge[T];
 
 
 /**********************************************************************************************
@@ -141,7 +140,6 @@ int max (int a, int b) {
 }</declaration>
 	<template>
 		<name>Line</name>
-		<parameter>int numLines</parameter>
 		<declaration>// Line Functions 
 
 void initialize_all() {
@@ -154,6 +152,10 @@ void initialize_all() {
             trainCanLeave[i][j] = false;
             trainIsWaiting[i][j] = false;
         }
+    }
+    for(i=0; i&lt;T; i++) {
+        trainMaxCharge[i] = 100;
+        trainActualCharge[i] = 100;
     }
    
 }</declaration>
@@ -387,12 +389,7 @@ void checkIfTrainCanLeave(){
 	<template>
 		<name>Train</name>
 		<parameter>const train_t TrainNumber</parameter>
-		<declaration>// Train Clocks
-clock enterReqClock; 
-clock timeTraveling; //must be reset as soon as a train enters a station
-
-int reAsk;
-
+		<declaration>int reAsk;
 /**********************************************************************************************
 /******************************** TRAIN FUNCTIONS *********************************************
 /**********************************************************************************************/
@@ -481,102 +478,6 @@ void updateTimeLeft (){
     trainTimeLeft[TrainNumber] -= 1;
 }
 
-/********************************************************************/
-/*********************************BEGIN POLICIES*********************/
-/********************************************************************/
-
-/*
-first policy: 
- - if the train has charge &gt;= 80% of its max charge
- - if the distance it can cover is at least 1.5x of the distance to next station multiplied by the drop charge factor
-*/
-bool checkPolicyOne(int trainIndex){
-    if ( trainActualCharge[trainIndex] &gt;= ((PERC_CHARGE_TRAIN_MUST_HAVE * trainMaxCharge[trainIndex])/100)  and 
-         trainActualCharge[trainIndex] &gt;= ((PERC_DIST_TRAIN_MUST_COVER * trainDistanceToNextStation[trainIndex] * CHARGE_DROP)/100)  )
-            return true;
-    else
-            return false;
-}
-
-/*
-second policy (useless just for testing purpose):
- - if the train has enough charge to travel from station 0 to last station (considering the charge drop)
-*/
-bool checkPolicyTwo(int trainIndex){
-    int i;
-    int totalLineDistance = 0;
-    for (i = 0; i &lt; (S-1); i++){
-        totalLineDistance += lineDistance[i];
-    }
-    if (trainActualCharge[trainIndex] &gt;= totalLineDistance * CHARGE_DROP)
-        return true;
-    else
-        return false;
-}
-/*
-third policy:
- - if the station is a bottleneck, the train, provided that can reach the next station, leaves
- - otherwise it follows the first policy (if not the train would leave the station only if it is a bottleneck)
-*/
-bool checkPolicyThree(int trainIndex){
-    int stationIndex = trainActualStation[TrainNumber];
-    //if it's a bottleneck and can reach next station needs to leave ASAP
-    if ( stationAvailableTrucks[stationIndex] == 0 and
-         trainActualCharge[trainIndex] &gt;= trainDistanceToNextStation[trainIndex] * CHARGE_DROP)
-            return true;
-    else if(trainActualCharge[trainIndex] &gt;= (trainDistanceToNextStation[trainIndex] * CHARGE_DROP) )
-            return true;
-    else
-            return false;
-}
-
-bool checkPolicyFour(int trainIndex){
-    int stationIndex = trainActualStation[TrainNumber];
-    //if it's a bottleneck and can reach next station needs to leave ASAP
-    if ( stationAvailableTrucks[stationIndex] == 0 and
-         trainActualCharge[trainIndex] &gt;= (trainDistanceToNextStation[trainIndex]/trainVelocity[trainIndex]) * CHARGE_DROP )
-            return true;
-    else if(trainActualCharge[trainIndex] &gt;= (trainDistanceToNextStation[trainIndex]/trainVelocity[trainIndex]) * (CHARGE_DROP) )
-            return true;
-    else
-            return false;
-}
-
-bool checkPolicyFive(){
-    if (trainTimeLeft[TrainNumber] == ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])) ||
-        trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
-        return true;
-    else
-        return false;
-}
-
-bool checkPolicy6(){
-    if ( trainTimeLeft[TrainNumber] &lt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber]) * (SAFE_TIME_MULT/100)) )
-        return true;
-    else 
-        if (trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
-            return true;
-        else
-            return false;
-}
-
-
-
-/********************************************************************/
-/*********************************END POLICIES***********************/
-/********************************************************************/
-
-
-bool trainWaiting(int stationIndex) {
-    int j;
-    for (j=0; j&lt;T; j++) {
-        if (trainWantsToAccess[stationIndex][j])
-            return true;
-    }
-    return false;
-     
-}
-
 bool trainWorseThanCurrent(int stationIndex) {
     int j;
     for (j=0; j&lt;T; j++){
@@ -589,13 +490,22 @@ bool trainWorseThanCurrent(int stationIndex) {
 
 }
 
+/********************************************************************/
+/*********************************BEGIN POLICIES*********************/
+/********************************************************************/
 
-/*
-implementation of policy to let a train leave the station
-*/
-void updateIfTrainWantsToLeave(){
+bool checkBestConditionsPolicy(){
+    if ( trainTimeLeft[TrainNumber] &lt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber]) * (SAFE_TIME_MULT/100)) )
+        return true;
+    else 
+        if (trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
+            return true;
+        else
+            return false;
+}
 
-    //check if it a critical situation
+bool checkSafePolicy(){
+    //check if it is a critical situation
     int stationIndex = trainActualStation[TrainNumber];
     bool waitingTrain;
     int i;
@@ -605,13 +515,23 @@ void updateIfTrainWantsToLeave(){
     }
     if(stationAvailableTrucks[stationIndex] == 0 and waitingTrain) {
         if (trainWorseThanCurrent(stationIndex))
-            trainWantsToLeave[stationIndex][TrainNumber] = true;
+            return true;
     }
+    return false;
+}
 
-    //check my policies greedy -- max charge
-    if (checkPolicy6()){
+/********************************************************************/
+/*********************************END POLICIES***********************/
+/********************************************************************/
+/*
+implementation of policy to let a train leave the station
+*/
+void updateIfTrainWantsToLeave(){
+    int stationIndex = trainActualStation[TrainNumber];
+    //check both policies policies
+    if (checkSafePolicy() or checkBestConditionsPolicy())
         trainWantsToLeave[stationIndex][TrainNumber] = true;
-    }
+    
 }
 
 /*
@@ -708,7 +628,12 @@ bool chargeOver() {
     return trainActualCharge[TrainNumber]==0;
 }
 
-
+bool arrived(){
+    if (trainDistanceToNextStation[TrainNumber] == 0)
+        return true;
+    else 
+        return false;
+}
 
 
 
@@ -833,8 +758,7 @@ trainWantsToLeaveStation()</label>
 		<transition>
 			<source ref="id13"/>
 			<target ref="id13"/>
-			<label kind="guard" x="-518" y="-791">trainDistanceToNextStation[TrainNumber] &gt; 0
-and goOnCheck()</label>
+			<label kind="guard" x="-518" y="-791">not arrived() and goOnCheck()</label>
 			<label kind="synchronisation" x="-518" y="-841">go?</label>
 			<label kind="assignment" x="-518" y="-825">loose_charge(CHARGE_DROP), 
 update_distance(), updateTimeLeft()</label>
@@ -876,16 +800,15 @@ updateTimeLeft(), recharge()</label>
 		<transition>
 			<source ref="id13"/>
 			<target ref="id14"/>
-			<label kind="guard" x="-1122" y="-731">trainDistanceToNextStation[TrainNumber] == 0
-and goOnCheck()</label>
-			<label kind="synchronisation" x="-1122" y="-748">waitingToEnter!</label>
+			<label kind="guard" x="-1122" y="-714">arrived() and goOnCheck()</label>
+			<label kind="synchronisation" x="-1122" y="-731">waitingToEnter!</label>
 			<label kind="assignment" x="-1122" y="-697">trainWantsToEnter(true)</label>
 			<nail x="-765" y="-680"/>
 			<nail x="-1513" y="-680"/>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
-l = Line(2);
+l = Line();
 sm = StationManager();
 // List one or more processes to be composed into a system.
 system l,Station, Train&lt;sm;

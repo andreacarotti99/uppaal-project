@@ -1,0 +1,66 @@
+
+/*
+first policy: 
+ - if the train has charge >= 80% of its max charge
+ - if the distance it can cover is at least 1.5x of the distance to next station multiplied by the drop charge factor
+*/
+bool checkPolicyOne(int trainIndex){
+    if ( trainActualCharge[trainIndex] >= ((PERC_CHARGE_TRAIN_MUST_HAVE * trainMaxCharge[trainIndex])/100)  and 
+         trainActualCharge[trainIndex] >= ((PERC_DIST_TRAIN_MUST_COVER * trainDistanceToNextStation[trainIndex] * CHARGE_DROP)/100)  )
+            return true;
+    else
+            return false;
+}
+
+/*
+second policy (useless just for testing purpose):
+ - if the train has enough charge to travel from station 0 to last station (considering the charge drop)
+*/
+bool checkPolicyTwo(int trainIndex){
+    int i;
+    int totalLineDistance = 0;
+    for (i = 0; i < (S-1); i++){
+        totalLineDistance += lineDistance[i];
+    }
+    if (trainActualCharge[trainIndex] >= totalLineDistance * CHARGE_DROP)
+        return true;
+    else
+        return false;
+}
+/*
+third policy:
+ - if the station is a bottleneck, the train, provided that can reach the next station, leaves
+ - otherwise it follows the first policy (if not the train would leave the station only if it is a bottleneck)
+*/
+bool checkPolicyThree(int trainIndex){
+    int stationIndex = trainActualStation[TrainNumber];
+    //if it's a bottleneck and can reach next station needs to leave ASAP
+    if ( stationAvailableTrucks[stationIndex] == 0 and
+         trainActualCharge[trainIndex] >= trainDistanceToNextStation[trainIndex] * CHARGE_DROP)
+            return true;
+    else if(trainActualCharge[trainIndex] >= (trainDistanceToNextStation[trainIndex] * CHARGE_DROP) )
+            return true;
+    else
+            return false;
+}
+
+bool checkPolicyFour(int trainIndex){
+    int stationIndex = trainActualStation[TrainNumber];
+    //if it's a bottleneck and can reach next station needs to leave ASAP
+    if ( stationAvailableTrucks[stationIndex] == 0 and
+         trainActualCharge[trainIndex] >= (trainDistanceToNextStation[trainIndex]/trainVelocity[trainIndex]) * CHARGE_DROP )
+            return true;
+    else if(trainActualCharge[trainIndex] >= (trainDistanceToNextStation[trainIndex]/trainVelocity[trainIndex]) * (CHARGE_DROP) )
+            return true;
+    else
+            return false;
+}
+
+bool checkPolicyFive(){
+    if (trainTimeLeft[TrainNumber] == ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])) ||
+        trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
+        return true;
+    else
+        return false;
+}
+
