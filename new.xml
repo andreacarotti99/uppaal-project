@@ -25,27 +25,31 @@ const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose whil
 const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;        //expressed in x/100 so in this case 80 refers to 80%
 const int PERC_DIST_TRAIN_MUST_COVER = 150;        //the train need to be able to cover at least 1.5x times the distance from next station
 const int SAFE_CHARGE_MULT = 100;                  //multiplier to safely proceed to next station (charge)
-const int SAFE_TIME_MULT = 100;                    //multiplier to safely proceed to next station (time)
+const int SAFE_TIME_MULT = 200;                    //multiplier to safely proceed to next station (time)
 const int TAU = 10000;
 const int T = 4;                                   //number of trains
-const int S = 4;                                   //number of stations
+const int S = 5;                                   //number of stations
+
+typedef int[0,S-1] station_t;
+typedef int[0,T-1] train_t;
+
 /*
 first element is the distance in km from station 1 to station 2, 
 second element is the distance in km from station 2 to station 3
 EXPRESSED IN UNITS
 */
-const int lineDistance[S-1] = { 80, 70, 50 };
+int lineDistance[S-1]={90,70, 50, 90};
 /*
 first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
-*/
-const int lineMaxDelay[S-1] = { 30, 22, 15 };
+*/                            //    30  22 15 30
+const int lineMaxDelay[S-1] = { 190, 170, 150, 190 };
 
 /*
 number of total trucks free in the INDEX station
 */
-const int stationNumberOfTrucks[S] = { 3, 1, 3, 2 };
+const int stationNumberOfTrucks[S] = { 3, 1, 3, 2, 2 };
 
 /*
 this is the max charge of train INDEX
@@ -65,7 +69,7 @@ const int trainVelocity[T] = { 10, 8, 8, 10 };
 /*
 number of available trucks free in the INDEX station
 */
-int stationAvailableTrucks[S] = { 1, 0, 2, 2 };
+int stationAvailableTrucks[S] = { 1, 0, 2, 2, 2 };
 
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
@@ -107,6 +111,8 @@ bool trainCanLeave[S][T];
 
 bool trainIsWaiting[S][T];
 
+
+
 /*
 this is a sort of map: it provides information of where are currently the trains,
 the train is the INDEX so if for example Train(0) is at station 0, Train(1) is at
@@ -126,10 +132,14 @@ int idTrainLeaving = 0;
 /**********************************************************************************************
 /******************************* GLOBAL FUNCTIONS *********************************************
 /**********************************************************************************************/
-</declaration>
+int min(int a, int b){
+    if (a &lt;= b)
+        return a;
+    else return b;
+}</declaration>
 	<template>
 		<name>Line</name>
-		<parameter>int NumberTrains, int NumberStations</parameter>
+		<parameter>int numLines</parameter>
 		<declaration>// Line Clocks
 
 // Line Variables
@@ -153,10 +163,7 @@ void initialize_all() {
             trainIsWaiting[i][j] = false;
         }
     }
-
-    for(i=0; i&lt;T; i++){
-    
-    }
+   
 }</declaration>
 		<location id="id0" x="-365" y="-535">
 			<name x="-390" y="-569">working</name>
@@ -184,7 +191,7 @@ void initialize_all() {
 	</template>
 	<template>
 		<name>Station</name>
-		<parameter>int StationNumber</parameter>
+		<parameter>const station_t StationNumber</parameter>
 		<declaration>
 /*
 retrieves the # of available trucks
@@ -242,36 +249,6 @@ variables to check before letting in/out a train
 */
 bool canEnter = false;
 bool canLeave = false;
-
-/*
-function to check if a train can enter the current station,
-if so update the matrix "trainCanAccess"
-*/
-void checkIfTrainCanEnterOld(){
-    int i,j; //i is the station,j is the train
-    int stationIndex; 
-    for (i=0; i&lt;S; i++){
-        for(j=0; j&lt;T; j++){
-            if(trainWantsToAccess[i][j] and (not trainCanAccess[i][j])){
-                stationIndex = i;
-                if(stationAvailableTrucks[stationIndex] &gt; 0) {
-                    trainCanAccess[i][j] = true;
-                    stationAvailableTrucks[stationIndex] -= 1;
-                    canEnter = true;
-                }
-            }                
-            
-        }
-    }
-}
-
-
-int min(int a, int b){
-    if (a &lt;= b)
-        return a;
-    else return b;
-}
-
 
 /*
 check if train can enter with also the check on which train has the lower charge
@@ -418,7 +395,7 @@ void checkIfTrainCanLeave(){
 	</template>
 	<template>
 		<name>Train</name>
-		<parameter>int TrainNumber</parameter>
+		<parameter>const train_t TrainNumber</parameter>
 		<declaration>// Train Clocks
 clock enterReqClock; 
 clock timeTraveling; //must be reset as soon as a train enters a station
@@ -428,13 +405,6 @@ int reAsk;
 /**********************************************************************************************
 /******************************** TRAIN FUNCTIONS *********************************************
 /**********************************************************************************************/
-
-int min(int a, int b){
-    if (a &lt;= b)
-        return a;
-    else return b;
-}
-
 /*
 function to raise the battery level of a train -- policy needed
 */
@@ -929,18 +899,10 @@ and goOnCheck()</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
-l = Line(1,1);
-s0 = Station(0);
-s1 = Station(1);
-s2 = Station(2);
-s3 = Station(3);
-t0 = Train(0);
-t1 = Train(1);
-t2 = Train(2);
-t3 = Train(3);
+l = Line(2);
 sm = StationManager();
 // List one or more processes to be composed into a system.
-system l, s0, s1, s2, s3, t0, t1, t2, t3&lt;sm;
+system l,Station, Train&lt;sm;
     </system>
 	<queries>
 		<query>
@@ -956,11 +918,11 @@ system l, s0, s1, s2, s3, t0, t1, t2, t3&lt;sm;
 			<comment>For all the states, it never happens that the train time left reaches 0</comment>
 		</query>
 		<query>
-			<formula>A[] (!t0.out_of_time and !t1.out_of_time and !t2.out_of_time)</formula>
+			<formula>A[] (!Train(0).out_of_time and !Train(1).out_of_time and !Train(2).out_of_time and !Train(3).out_of_time)</formula>
 			<comment>for all states it is always true that no one of the trains is out of time</comment>
 		</query>
 		<query>
-			<formula>A[] (!t0.out_of_power and !t1.out_of_power and !t2.out_of_power and !t3.out_of_power)</formula>
+			<formula>A[] (!Train(0).out_of_power and !Train(1).out_of_power and !Train(2).out_of_power and !Train(3).out_of_power)</formula>
 			<comment></comment>
 		</query>
 	</queries>
