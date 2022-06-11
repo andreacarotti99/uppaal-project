@@ -24,8 +24,8 @@ const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose whil
 
 const int PERC_CHARGE_TRAIN_MUST_HAVE = 80;        //expressed in x/100 so in this case 80 refers to 80%
 const int PERC_DIST_TRAIN_MUST_COVER = 150;        //the train need to be able to cover at least 1.5x times the distance from next station
-const int SAFE_CHARGE_MULT = 200;                  //multiplier to safely proceed to next station (charge)
-const int SAFE_TIME_MULT = 150;                    //multiplier to safely proceed to next station (time)
+const int SAFE_CHARGE_MULT = 100;                  //multiplier to safely proceed to next station (charge)
+const int SAFE_TIME_MULT = 100;                    //multiplier to safely proceed to next station (time)
 const int TAU = 10000;
 const int T = 4;                                   //number of trains
 const int S = 4;                                   //number of stations
@@ -40,7 +40,7 @@ first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
 */
-const int lineMaxDelay[S-1] = { 50, 40, 40 };
+const int lineMaxDelay[S-1] = { 30, 22, 15 };
 
 /*
 number of total trucks free in the INDEX station
@@ -50,17 +50,17 @@ const int stationNumberOfTrucks[S] = { 3, 1, 3, 2 };
 /*
 this is the max charge of train INDEX
 */
-const int trainMaxCharge[T] = { 170, 170, 170, 170 };
+const int trainMaxCharge[T] = { 100, 100, 100, 100 };
 
 /*
 charges of train, first element charge of Train(0), second element charge of Train(1) and third element charge of Train(2)
 */
-int trainActualCharge[T] = { 50, 170, 170, 170 };
+int trainActualCharge[T] = { 100, 100, 100, 100 };
 
 /*
 velocity of Train(i) EXPRESSED in UNITS/CLOCK
 */
-const int trainVelocity[T] = { 5, 3, 4, 5 };
+const int trainVelocity[T] = { 10, 8, 8, 10 };
 
 /*
 number of available trucks free in the INDEX station
@@ -589,27 +589,22 @@ bool checkPolicyFive(){
         return false;
 }
 
+int max (int a, int b) {
+    if (a&gt;b) return a;
+    else return b;
+}
+
 bool checkPolicy6(){
     if ( trainTimeLeft[TrainNumber] &lt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber]) * (SAFE_TIME_MULT/100)) )
         return true;
-    else
-        if (trainActualCharge[TrainNumber] &gt;=  ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])*CHARGE_DROP * (SAFE_CHARGE_MULT/100)) )
+    else 
+        if (trainActualCharge[TrainNumber] == trainMaxCharge[TrainNumber])
             return true;
         else
             return false;
 }
 
-bool checkPolicy6_old(){
-    if ( trainTimeLeft[TrainNumber] &gt;= ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber]) * (SAFE_TIME_MULT/100)) 
-               and
-        trainActualCharge[TrainNumber] &gt;=  ((trainDistanceToNextStation[TrainNumber] / trainVelocity[TrainNumber])*CHARGE_DROP * (SAFE_CHARGE_MULT/100)) ){
-        return true;
-    }
-    else{
-        return false;
-    }
-        
-}
+
 
 /********************************************************************/
 /*********************************END POLICIES***********************/
@@ -637,6 +632,7 @@ bool trainWorseThanCurrent(int stationIndex) {
     return false;
 
 }
+
 
 /*
 implementation of policy to let a train leave the station
