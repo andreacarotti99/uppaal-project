@@ -4,45 +4,61 @@
 	<declaration>/**********************************************************************************************
 /******************************* GLOBAL VARIABLES *********************************************
 /**********************************************************************************************/
-chan enter, start, wait, leave;
-urgent chan waitingToEnter,waitingToLeave;
-chan priority waitingToEnter &lt; waitingToLeave;
-/*
-channel declared urgent to inizialize every element of the system in the same moment
-*/
-urgent broadcast chan initialization, updateStatus, go;
-/*
-constant parameters of the system
-*/
+
+//UNCOMMENT ONE OF THE TWO POSSIBLE CONFIGURATIONS
+/*************************** CONFIGURATION 1: PROPERTIES SATISFIED ******************************/
+
 const int R = 2;
 const int RECHARGE = 5;                 //how much charge a train will gain in a station
 const int CHARGE_DROP = 2;              //how much charge a train will lose while traveling
 const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose while waiting to enter a station  
 
-const int SAFE_TIME_MULT = 200;                   //multiplier to safely proceed to next station (time)
-const int T = 4;                                  //number of trains
-const int S = 5;                                  //number of stations
-const int K = 5;                                  //amount for checking properties
-const int H = 80;                                  //amount for checking properties
+const int SAFE_TIME_MULT = 200;         //multiplier to safely proceed to next station (time)
+const int T = 4;                        //number of trains
+const int S = 5;                        //number of stations
+const int lineMaxDelay[S-1] =  { 30,   22,  21,  30 };
+const int lineDistance[S-1] =  { 120, 100,  90, 120 };
+const int trainVelocity[T] =   { 10,   10,  10,  10 };
+
+
+/*************************** CONFIGURATION 2: PROPERTIES NOT SATISFIED *****************************/
+/*
+const int R = 2;
+const int RECHARGE = 2;                 //how much charge a train will gain in a station
+const int CHARGE_DROP = 3;              //how much charge a train will lose while traveling
+const int CHARGE_DROP_WAIT = 1;         //how much charge a train will lose while waiting to enter a station  
+
+const int SAFE_TIME_MULT = 100;         //multiplier to safely proceed to next station (time)
+const int T = 4;                        //number of trains
+const int S = 5;                        //number of stations
+const int lineMaxDelay[S-1] =  {  30,   22,   21,  30 };
+const int lineDistance[S-1] =  { 300,  250,  170, 300 };
+const int trainVelocity[T] =   {  10,   10,   10,  10 };
+*/
+
+/*
+channels
+*/
+chan enter, start, wait, leave;
+urgent chan waitingToEnter,waitingToLeave;
+chan priority waitingToEnter &lt; waitingToLeave;
+
+/*
+channel declared urgent to inizialize every element of the system in the same moment
+*/
+urgent broadcast chan initialization, updateStatus, go;
+
+/*
+constants parameters for checking properties
+*/
+const int K = 10;                       //amount for time checking
+const int H = 80;                       //amount for charge checking
+
 /*
 STRUCTS
 */
 typedef int[0,S-1] station_t;
 typedef int[0,T-1] train_t;
-
-/*
-first element is the distance in km from station 1 to station 2, 
-second element is the distance in km from station 2 to station 3
-EXPRESSED IN UNITS
-*/
-int lineDistance[S-1]={170,150,130,170};
-
-/*
-first element is the max time needed to get from station 1 to 2
-second element is the max time needed to get from station 2 to 3
-EXPRESSED IN CLOCKS
-*/                            //    30  22 15 30
-const int lineMaxDelay[S-1] = { 40, 30, 20, 40 };
 
 /*
 number of total tracks free in the INDEX station
@@ -61,11 +77,6 @@ int trainActualStation[T]={ 0,1,2, 0 };
 same as above, but maps the next station for each train
 */
 int trainNextStation[T] = { 1, 0, 1, 1 };
-
-/*
-velocity of Train(i) EXPRESSED in UNITS/CLOCK
-*/                            //10 8 8 10
-const int trainVelocity[T] = { 150, 120, 130, 140 };
 
 /*
 number of available tracks free in the INDEX station
@@ -899,7 +910,7 @@ system l,Station, Train&lt;sm;
 			<comment>Checks if there is a state in which the following property is satisfied: a train's time left to reach the following station is lower than the amount specified.</comment>
 		</query>
 		<query>
-			<formula>E&lt;&gt;(checkChargeLowerThan(H))</formula>
+			<formula>E&lt;&gt;(checkChargeLowerThan(80))</formula>
 			<comment>Checks if there is a state in which the following property is satisfied: a train's charge is lower than the amount specified.</comment>
 		</query>
 		<query>
