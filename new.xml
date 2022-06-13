@@ -45,9 +45,9 @@ EXPRESSED IN CLOCKS
 const int lineMaxDelay[S-1] = { 50, 30, 25, 50 };
 
 /*
-number of total trucks free in the INDEX station
+number of total tracks free in the INDEX station
 */
-const int stationNumberOfTrucks[S] = { 3, 1, 3, 2, 2 };
+const int stationNumberOfTracks[S] = { 3, 1, 3, 2, 2 };
 
 /*
 this is a sort of map: it provides information of where are currently the trains,
@@ -68,9 +68,9 @@ velocity of Train(i) EXPRESSED in UNITS/CLOCK
 const int trainVelocity[T] = { 150, 120, 130, 140 };
 
 /*
-number of available trucks free in the INDEX station
+number of available tracks free in the INDEX station
 */
-int stationAvailableTrucks[S] = { 1, 0, 2, 2, 2 };
+int stationAvailableTracks[S] = { 1, 0, 2, 2, 2 };
 
 /*
 vector useful to know if a train is going forward or backward: 0-&gt;1-&gt;2
@@ -142,7 +142,7 @@ int max (int a, int b) {
 bool checkFullStation(){
     int i, j;
     for(i=0; i&lt;S; i++) {
-        if(stationAvailableTrucks[i]==0){
+        if(stationAvailableTracks[i]==0){
             for(j=0; j&lt;T; j++)
                 if(trainIsWaiting[i][j])
                     return true;
@@ -187,10 +187,10 @@ bool checkTrainsNotOutOfTime(){
     return true;
 }
 
-bool checkNoMoreTrainsThanTrucks() {
+bool checkNoMoreTrainsThanTracks() {
     int i;
     for (i=0; i&lt;S; i++) {
-        if(stationAvailableTrucks[i] &lt; 0 or stationAvailableTrucks[i] &gt; stationNumberOfTrucks[i])
+        if(stationAvailableTracks[i] &lt; 0 or stationAvailableTracks[i] &gt; stationNumberOfTracks[i])
             return false;
     }
     return true;
@@ -247,10 +247,10 @@ void initialize_all() {
 		<name>Station</name>
 		<parameter>const station_t StationNumber</parameter>
 		<declaration>/*
-retrieves the # of available trucks
+retrieves the # of available tracks
 */
-int availableTrucks(){
-    return stationAvailableTrucks[StationNumber];
+int availableTracks(){
+    return stationAvailableTracks[StationNumber];
 }
 
 
@@ -272,26 +272,26 @@ int availableTrucks(){
 		<transition>
 			<source ref="id4"/>
 			<target ref="id2"/>
-			<label kind="guard" x="-1088" y="-952">availableTrucks()&gt;0</label>
+			<label kind="guard" x="-1088" y="-952">availableTracks()&gt;0</label>
 			<label kind="synchronisation" x="-1071" y="-969">updateStatus?</label>
 			<nail x="-952" y="-926"/>
 		</transition>
 		<transition>
 			<source ref="id3"/>
 			<target ref="id4"/>
-			<label kind="guard" x="-1232" y="-1147">availableTrucks() == 0</label>
+			<label kind="guard" x="-1232" y="-1147">availableTracks() == 0</label>
 			<label kind="synchronisation" x="-1232" y="-1164">initialization?</label>
 		</transition>
 		<transition>
 			<source ref="id2"/>
 			<target ref="id4"/>
-			<label kind="guard" x="-1232" y="-1062">availableTrucks()==0</label>
+			<label kind="guard" x="-1232" y="-1062">availableTracks()==0</label>
 			<label kind="synchronisation" x="-1232" y="-1079">updateStatus?</label>
 		</transition>
 		<transition>
 			<source ref="id3"/>
 			<target ref="id2"/>
-			<label kind="guard" x="-1479" y="-1062">availableTrucks() &gt; 0</label>
+			<label kind="guard" x="-1479" y="-1062">availableTracks() &gt; 0</label>
 			<label kind="synchronisation" x="-1428" y="-1079">initialization?</label>
 		</transition>
 	</template>
@@ -329,12 +329,12 @@ void checkIfTrainCanEnter(){
             }               
         }
     }
-    if (stationAvailableTrucks[stationIndex] == 0 &amp;&amp; found) {
+    if (stationAvailableTracks[stationIndex] == 0 &amp;&amp; found) {
         trainIsWaiting[trainSavedIndex][trainSavedIndex]=true;
     }
-    if(stationAvailableTrucks[stationIndex] &gt; 0 &amp;&amp; found) {
+    if(stationAvailableTracks[stationIndex] &gt; 0 &amp;&amp; found) {
         trainCanAccess[stationIndex][trainSavedIndex] = true;
-        stationAvailableTrucks[stationIndex] -= 1;
+        stationAvailableTracks[stationIndex] -= 1;
         canEnter = true;
     }
 }
@@ -353,7 +353,7 @@ void checkIfTrainCanLeave(){
                 //no longer needed check policy here... the station manager always permits to leave because the train already made the checks
                 stationIndex = i;
                 trainCanLeave[i][idTrainLeaving] = true;
-                stationAvailableTrucks[stationIndex] += 1;
+                stationAvailableTracks[stationIndex] += 1;
                 canLeave = true;
                 return;
             }
@@ -573,7 +573,7 @@ bool checkSafePolicy(){
         if(trainIsWaiting[stationIndex][i] == true)
             waitingTrain = true;
     }
-    if(stationAvailableTrucks[stationIndex] == 0 and waitingTrain) {
+    if(stationAvailableTracks[stationIndex] == 0 and waitingTrain) {
         if (trainWorseThanCurrent(stationIndex))
             return true;
     }
@@ -883,8 +883,8 @@ system l,Station, Train&lt;sm;
 			<comment>For all states, it is always true that no one of the trains is out of charge</comment>
 		</query>
 		<query>
-			<formula>A[] (checkNoMoreTrainsThanTrucks())	</formula>
-			<comment>For all the states, it never happens that a station hosts more trains than its available trucks.</comment>
+			<formula>A[] (checkNoMoreTrainsThanTracks())	</formula>
+			<comment>For all the states, it never happens that a station hosts more trains than its available tracks.</comment>
 		</query>
 		<query>
 			<formula>E&lt;&gt;(checkTimeLeftLowerThan(K))</formula>
