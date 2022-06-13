@@ -167,7 +167,37 @@ bool checkTimeLeftLowerThan(int amount){
             return true;
     }
     return false;
-}</declaration>
+}
+
+bool checkTrainsNotOutOfPower(){
+    int i;
+    for (i=0; i&lt;T; i++) {
+        if (trainActualCharge[i] &lt;= 0)
+            return false;
+    }
+    return true;
+}
+
+bool checkTrainsNotOutOfTime(){
+    int i;
+    for (i=0; i&lt;T; i++) {
+        if (trainTimeLeft[i] &lt;= 0)
+            return false;
+    }
+    return true;
+}
+
+bool checkNoMoreTrainsThanTrucks() {
+    int i;
+    for (i=0; i&lt;S; i++) {
+        if(stationAvailableTrucks[i] &lt; 0 or stationAvailableTrucks[i] &gt; stationNumberOfTrucks[i])
+            return false;
+    }
+    return true;
+}
+
+
+</declaration>
 	<template>
 		<name>Line</name>
 		<declaration>// Line Functions 
@@ -845,12 +875,16 @@ system l,Station, Train&lt;sm;
     </system>
 	<queries>
 		<query>
-			<formula>A[] (!Train(0).out_of_time and !Train(1).out_of_time and !Train(2).out_of_time and !Train(3).out_of_time)</formula>
-			<comment>for all states it is always true that no one of the trains is out of time</comment>
+			<formula>A[] (checkTrainsNotOutOfTime())</formula>
+			<comment>For all states it is always true that no one of the trains is out of time</comment>
 		</query>
 		<query>
-			<formula>A[] (!Train(0).out_of_power and !Train(1).out_of_power and !Train(2).out_of_power and !Train(3).out_of_power)</formula>
-			<comment></comment>
+			<formula>A[] (checkTrainsNotOutOfPower)</formula>
+			<comment>For all states, it is always true that no one of the trains is out of charge</comment>
+		</query>
+		<query>
+			<formula>A[] (checkNoMoreTrainsThanTrucks())	</formula>
+			<comment>For all the states, it never happens that a station hosts more trains than its available trucks.</comment>
 		</query>
 		<query>
 			<formula>E&lt;&gt;(checkTimeLeftLowerThan(K))</formula>
@@ -862,7 +896,12 @@ system l,Station, Train&lt;sm;
 		</query>
 		<query>
 			<formula>E&lt;&gt;(checkFullStation())</formula>
-			<comment>Checks if there is a state in which the following property is satisfied: a station is full and some other train is waiting outside the station.</comment>
+			<comment>Checks if there is a state in which the following property is satisfied: a station is full and some other train is waiting outside the station.
+This query is useful to check if there is at least a critical situation in which our model is involved.</comment>
+		</query>
+		<query>
+			<formula></formula>
+			<comment></comment>
 		</query>
 	</queries>
 </nta>
