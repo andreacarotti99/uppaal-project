@@ -23,7 +23,7 @@ const int SAFE_CHARGE_MULT = 100;                  //multiplier to safely procee
 const int SAFE_TIME_MULT = 200;                    //multiplier to safely proceed to next station (time)
 const int T = 4;                                   //number of trains
 const int S = 5;                                   //number of stations
-
+const int K = 10;                                  //amount for checking properties
 /*
 STRUCTS
 */
@@ -42,7 +42,7 @@ first element is the max time needed to get from station 1 to 2
 second element is the max time needed to get from station 2 to 3
 EXPRESSED IN CLOCKS
 */                            //    30  22 15 30
-const int lineMaxDelay[S-1] = { 90, 70, 60, 90 };
+const int lineMaxDelay[S-1] = { 50, 30, 25, 50 };
 
 /*
 number of total trucks free in the INDEX station
@@ -64,8 +64,8 @@ int trainNextStation[T] = { 1, 0, 1, 1 };
 
 /*
 velocity of Train(i) EXPRESSED in UNITS/CLOCK
-*/
-const int trainVelocity[T] = { 10, 8, 8, 10 };
+*/                            //10 8 8 10
+const int trainVelocity[T] = { 150, 120, 130, 140 };
 
 /*
 number of available trucks free in the INDEX station
@@ -137,6 +137,36 @@ int min(int a, int b){
 int max (int a, int b) {
     if (a&gt;b) return a;
     else return b;
+}
+
+bool checkFullStation(){
+    int i, j;
+    for(i=0; i&lt;S; i++) {
+        if(stationAvailableTrucks[i]==0){
+            for(j=0; j&lt;T; j++)
+                if(trainIsWaiting[i][j])
+                    return true;
+        }
+    }
+    return false;
+}
+
+bool checkChargeLowerThan(int amount) {
+    int i;
+    for (i=0; i&lt;T; i++){
+        if(trainActualCharge[i]&lt;amount)
+            return true;
+    }
+    return false;
+}
+
+bool checkTimeLeftLowerThan(int amount){
+    int i;
+    for (i=0; i&lt;T; i++){
+        if(trainTimeLeft[i]&lt;amount)
+            return true;
+    }
+    return false;
 }</declaration>
 	<template>
 		<name>Line</name>
@@ -815,24 +845,24 @@ system l,Station, Train&lt;sm;
     </system>
 	<queries>
 		<query>
-			<formula>E&lt;&gt; (t0.out_of_time or t1.out_of_time or t2.out_of_time or t3.out_of_time)</formula>
-			<comment></comment>
-		</query>
-		<query>
-			<formula>E&lt;&gt; (t0.out_of_power or t1.out_of_power or t2.out_of_power or t3._out_of_power)</formula>
-			<comment></comment>
-		</query>
-		<query>
-			<formula>A[] (trainTimeLeft[0]&gt;0 &amp;&amp; trainTimeLeft[1] &gt; 0 &amp;&amp; trainTimeLeft[2] &gt; 0 &amp;&amp; trainTimeLeft[3] &gt; 0)</formula>
-			<comment>For all the states, it never happens that the train time left reaches 0</comment>
-		</query>
-		<query>
 			<formula>A[] (!Train(0).out_of_time and !Train(1).out_of_time and !Train(2).out_of_time and !Train(3).out_of_time)</formula>
 			<comment>for all states it is always true that no one of the trains is out of time</comment>
 		</query>
 		<query>
 			<formula>A[] (!Train(0).out_of_power and !Train(1).out_of_power and !Train(2).out_of_power and !Train(3).out_of_power)</formula>
 			<comment></comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt;(checkTimeLeftLowerThan(K))</formula>
+			<comment>Checks if there is a state in which the following property is satisfied: a train's time left to reach the following station is lower than the amount specified.</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt;(checkChargeLowerThan(K))</formula>
+			<comment>Checks if there is a state in which the following property is satisfied: a train's charge is lower than the amount specified.</comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt;(checkFullStation())</formula>
+			<comment>Checks if there is a state in which the following property is satisfied: a station is full and some other train is waiting outside the station.</comment>
 		</query>
 	</queries>
 </nta>
