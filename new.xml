@@ -96,7 +96,7 @@ int trainDistanceToNextStation[T] = { 80, 80, 70, 80 };
 /*
 current time left of each train to reach the next station -- Expressed in CLOCKs
 */
-int trainTimeLeft[T] = { 40, 40, 50, 40 };
+int trainTimeLeft[T] = { 30, 30, 22, 30 };
 
 /*
 Matrix useful to know which train wants to access each station
