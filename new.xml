@@ -887,7 +887,7 @@ system l,Station, Train&lt;sm;
 	<queries>
 		<query>
 			<formula>A[](!Train(0).out_of_time and !Train(1).out_of_time and !Train(2).out_of_time and !Train(3).out_of_time)</formula>
-			<comment></comment>
+			<comment>There is no train whose time left to reach the next station drops to 0</comment>
 		</query>
 		<query>
 			<formula>A[] (checkTrainsNotOutOfTime())</formula>
@@ -895,7 +895,7 @@ system l,Station, Train&lt;sm;
 		</query>
 		<query>
 			<formula>A[](!Train(0).out_of_power and !Train(1).out_of_power and !Train(2).out_of_power and !Train(3).out_of_power)</formula>
-			<comment></comment>
+			<comment>There is no train whose charge drops to 0</comment>
 		</query>
 		<query>
 			<formula>A[] (checkTrainsNotOutOfPower())</formula>
